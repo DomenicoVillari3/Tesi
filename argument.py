@@ -3,9 +3,7 @@ import random
 import numpy as np
 import cv2
 
-
-
-def add_random_noise(input_path, output_path):
+def capture_writer(input_path,output_path):
     # Leggi il video
     video = cv2.VideoCapture(input_path)
 
@@ -17,7 +15,12 @@ def add_random_noise(input_path, output_path):
     # Crea un VideoWriter per scrivere il video modificato
     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
 
-    intensity=random.randint(25,90)
+    return video,out
+
+
+def add_random_noise(input_path, output_path):
+    video,out=capture_writer(input_path,output_path)
+    intensity=random.randint(25,30)
 
     while True:
         success, frame = video.read()
@@ -39,16 +42,7 @@ def add_random_noise(input_path, output_path):
 
 
 def grayscale(input_path,output_path):
-    # Leggi il video
-    video = cv2.VideoCapture(input_path)
-
-    # Ottieni le proprietà del video
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Crea un VideoWriter per scrivere il video modificato
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height),isColor=False)
+    video,out=capture_writer(input_path,output_path)
 
     while True:
         success, frame = video.read()
@@ -68,17 +62,7 @@ def grayscale(input_path,output_path):
     
 
 def brightness_and_contrast(input_path,output_path):
-    # Leggi il video
-    video = cv2.VideoCapture(input_path)
-
-    # Ottieni le proprietà del video
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Crea un VideoWriter per scrivere il video modificato
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
-
+    video,out=capture_writer(input_path,output_path)
     brightness=50
     contrast=1.5
 
@@ -98,20 +82,37 @@ def brightness_and_contrast(input_path,output_path):
     video.release()
     out.release()
 
+def color_jitter(input_path,output_path):
+    video,out=capture_writer(input_path,output_path)
+
+    jitter_matrix = np.float32([[1, 0, 0, np.random.randint(-50, 50)], 
+                                [0, 1, 0, np.random.randint(-50, 50)], 
+                                [0, 0, 1, np.random.randint(-50, 50)]])
+    
+    while True:
+        success, frame = video.read()
+        
+        if not success:
+            break
+
+        jittered_frame = cv2.transform(frame, jitter_matrix)
+        
+        # Assicuriamoci che i valori dei pixel rimangano nel range [0, 255]
+        jittered_frame = np.clip(jittered_frame, 0, 255).astype(np.uint8)
+
+        
+        # Scrivi il frame nel nuovo video
+        out.write(jittered_frame)
+
+    # Rilascia le risorse
+    video.release()
+    out.release()
+
     
 
 
-def flip(input_path, output_path):
-    # Leggi il video
-    video = cv2.VideoCapture(input_path)
-
-    # Ottieni le proprietà del video
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Crea un VideoWriter per scrivere il video modificato
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+def flip(input_path, output_path,verso=0):
+    video,out=capture_writer(input_path,output_path)
 
     while True:
         success, frame = video.read()
@@ -119,8 +120,8 @@ def flip(input_path, output_path):
         if not success:
             break
 
-        # Capovolgi il frame erticalmente
-        frame = cv2.flip(frame, 0)
+        # Capovolgi il frame 
+        frame = cv2.flip(frame, verso)
 
         # Scrivi il frame nel nuovo video
         out.write(frame)
@@ -129,18 +130,48 @@ def flip(input_path, output_path):
     video.release()
     out.release()
 
+def blur(input_path, output_path,vertical=True):
+    video,out=capture_writer(input_path,output_path)
+
+    # Specify the kernel size. 
+    # The greater the size, the more the motion. 
+    kernel_size = 5
+    
+    # Create the vertical kernel. 
+    kernel_v = np.zeros((kernel_size, kernel_size)) 
+    
+    # Create a copy of the same for creating the horizontal kernel. 
+    kernel_h = np.copy(kernel_v) 
+    
+    # Fill the middle row with ones. 
+    kernel_v[:, int((kernel_size - 1)/2)] = np.ones(kernel_size) 
+    kernel_h[int((kernel_size - 1)/2), :] = np.ones(kernel_size) 
+    
+    # Normalize. 
+    kernel_v /= kernel_size 
+    kernel_h /= kernel_size 
+
+    while True:
+        success, frame = video.read()
+            
+        if not success:
+            break
+        
+        if vertical:
+            # Apply the vertical kernel. 
+            blurred = cv2.filter2D(frame, -1, kernel_v) 
+        else:
+            # Apply the horizontal kernel. 
+            blurred = cv2.filter2D(frame, -1, kernel_h)
+
+        out.write(blurred)
+    # Rilascia le risorse
+    video.release()
+    out.release()
+    
 
 def rotate(input_path, output_path):
-    # Leggi il video
-    video = cv2.VideoCapture(input_path)
-
-    # Ottieni le proprietà del video
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Crea un VideoWriter per scrivere il video modificato
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+    video,out=capture_writer(input_path,output_path)
 
     #Angolo di rotazione
     angle=random.randint(45,180)
@@ -170,11 +201,7 @@ def rotate(input_path, output_path):
     video.release()
     out.release()
 
-
-
-
-    
-def traslate(input_path,output_path):
+def resize(input_path,output_path,scale=0.5):
     # Leggi il video
     video = cv2.VideoCapture(input_path)
 
@@ -184,21 +211,51 @@ def traslate(input_path,output_path):
     fps = video.get(cv2.CAP_PROP_FPS)
 
     # Crea un VideoWriter per scrivere il video modificato
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(frame_width*scale),int( frame_height*scale)))
+
+
+    while True:
+        success, frame = video.read()
+            
+        if not success:
+            break
+
+        #resize image
+        
+       
+    
+        # resize image
+        resized = cv2.resize(frame, (0,0), fx=scale, fy=scale) 
+
+        out.write(resized)
+    
+    # Rilascia le risorse
+    
+
+
+
+    
+def traslate(input_path,output_path):
+    video,out=capture_writer(input_path,output_path)
 
     # Traslazione del frame
-    x=random.randint(10,15)
-    y=random.randint(-15,-1)
+    x=random.randint(10,50)
+    y=random.randint(-25,-1)
 
- 
+    if random.choice([True, False])==False:
+        x=-x
+    
+    
 
     while True:
         success, frame = video.read()
         
+        frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+
         if not success:
             break
-
-        
 
         #matrice di traslazione del frame
         M = np.float32([[1, 0, x], [0, 1, y]])
@@ -230,5 +287,18 @@ def show_video(path):
             break
     cap.release()
     cv2.destroyAllWindows()
+
+
+inp="/home/domenico/tesi/video/acqua_0.mp4"
+out="/home/domenico/tesi/video/acqua.mp4"
+
+#blur(inp, out,False)
+#flip(inp,out,1)
+#traslate(inp,out)
+#resize(inp,out,1.5)
+#color_jitter(inp,out)
+#show_video(inp)
+#show_video(out)
+
 
 
