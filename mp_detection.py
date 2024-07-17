@@ -1,0 +1,268 @@
+import cv2 
+import mediapipe as mp
+import numpy as np
+import os 
+import json
+from time import sleep
+
+# Initialize the Holistic model
+mp_holistic = mp.solutions.holistic
+mp_drawing = mp.solutions.drawing_utils
+holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
+NUM_POINTS=126
+VIDEO_DIR = "/home/domenico/tesi/video"
+
+
+'''FUNZIONE PER UTILIZZARE MEDIAPIPE SULLA WEBCAM
+    -Input=None
+    -Output=None'''
+def use_camera():
+    #inizia cattura
+    cap = cv2.VideoCapture(0)
+     
+    #finchè viene eseguita
+    while cap.isOpened():
+
+        # lettura del frame
+        success, frame = cap.read()
+
+        #condizione di uscita
+        if not success:
+            continue 
+
+        # Predizione del modello
+        frame, results = place_landmarks(frame, holistic)
+        #print(results)
+        
+        if results is not None:
+            #Disegna landmarks
+            draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
+            
+            # Estrazione dei landmarks su un array unidimensionale
+            landmarks=extract_landmarks(results)
+            #print(landmarks)
+            #print(len(landmarks))
+
+            #normalizzazione dei landmarks tra [0,1]
+            #normalized_landmarks=normalize_landmarks(landmarks)
+            #print(normalized_landmarks)
+            
+        # Show to screen
+        cv2.imshow('OpenCV Feed', frame)
+
+        # Break gracefully
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+'''UTILIZZO DEL MODELLO DI MEDIAPIPE
+    -Input=frame da valutare, modello di detection
+    output= frame, risultati della detection
+'''
+def place_landmarks(frame,model):
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)      # Converto il frame a RGB 
+    frame.flags.writeable = False                           # Rendo il frame non scrivibile     
+    results = model.process(frame)                      # Process
+    frame.flags.writeable = True                            # Rendo il frame scrivibile     
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    return frame,results
+
+
+'''FUNZIONE PER DISEGNARE I LANDMARK
+    Input=risultati del modello holistic, il frame analizzato,utility di drawing, holistic per ottenere le connessioni dei punti
+    Output=None 
+'''
+def draw_landmarks(results,frame,mp_drawing,mp_holistic):
+    if results.pose_landmarks:
+        #print(len(results.pose_landmarks.landmark))
+        mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
+                                mp_drawing.DrawingSpec(color=(0, 255, 0),thickness=1),
+                             mp_drawing.DrawingSpec(color=(0, 255, 0),thickness=1))
+    
+                                
+    if results.left_hand_landmarks:
+        #print(len(results.left_hand_landmarks.landmark))
+        mp_drawing.draw_landmarks(frame, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                                    mp_drawing.DrawingSpec(color=(255, 0, 0),thickness=1),
+                                    mp_drawing.DrawingSpec(color=(255, 0, 0),thickness=1))
+    if results.right_hand_landmarks:
+        #print(len(results.left_hand_landmarks.landmark))
+        mp_drawing.draw_landmarks(frame, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                                    mp_drawing.DrawingSpec(color=(0,0,255),thickness=1),
+                                    mp_drawing.DrawingSpec(color=(0,0,255),thickness=1))
+                                  
+
+
+'''Funzione per elaborare i landmarks in un array unidimensionale
+    Input=risultati del modello holistic
+    Output=array ad 1 dim con i landmark
+'''
+def extract_landmarks(results):
+    # Array per i landmarks delle pose e delle mani 3D, se non c'è creo un array di 0 
+    # 33 punti per la posa 
+    #21 per le mani 
+
+    #Punti totali 126 =(21*3)+(21*3)
+
+
+    #LEFT HAND
+    hand_left_array = []
+    #se viene rilevata la mano appendo le coordinate alla lista
+    if results.left_hand_landmarks:
+        for landmark in results.left_hand_landmarks.landmark:
+            hand_left_array.append((landmark.x, landmark.y, landmark.z))
+        hand_left_array=np.array(hand_left_array).flatten()
+    #altrimenti riempio di 0
+    else:
+        hand_left_array=np.zeros(21*3)
+    
+  
+    #RIGHT HAND
+    hand_right_array = []
+    if results.right_hand_landmarks:
+        for landmark in results.right_hand_landmarks.landmark:
+            hand_right_array.append((landmark.x, landmark.y, landmark.z))
+        hand_right_array= np.array(hand_right_array).flatten()
+    else:
+        hand_right_array=np.zeros(21*3)
+    
+    #torno un array ad 1 dimensione (126,)
+    ret=np.concatenate((hand_left_array, hand_right_array),axis=None) 
+
+    #se ret contiene solo 0 non sono state rilevate mani, dunque il frame potrà essere scartato
+    if np.all(ret == 0) or len(ret) == 0:
+        return None
+    else:
+        return ret
+    
+
+
+'''FUNZIONE PER NORMALIZZARE I LANDMARKS CON NORMALIZZAZIONE MINMAX'''
+def normalize_landmarks(landmarks):
+    # Calcola i valori massimi e minimi per ciascuna dimensione
+    min_vals = np.min(landmarks, axis=0)
+    max_vals = np.max(landmarks, axis=0)
+    #print(min_vals,max_vals)
+
+    # Normalizza tra 0 e 1
+    normalized_landmarks =(landmarks - min_vals) / (max_vals - min_vals) 
+
+    return normalized_landmarks
+
+
+'''FUNZIONE PER SALVARE I LANDMARK SU FILE .npy'''
+
+def save_landmarks(landmarks, action):
+    # Creo una directory ds
+    dir = "points"
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    
+    # Salvo i landmarks
+    filepath = dir + "/{}.npy".format(action)
+    #print(filepath)
+    np.save(filepath, landmarks)
+
+
+'''
+funzione per estrapolare i landmarks dai frame 
+'''
+def get_video_landmarks(video_path):
+    #starting the video capture
+    cap = cv2.VideoCapture(video_path)
+    
+   
+    frame_index = 1
+    all_landmarks = []
+
+    #finchè è aperta la cattura dei frame
+    while cap.isOpened():
+        
+        success, frame = cap.read()
+        
+        #se non va a buon fine la cattura del frame si esce
+        if not success:
+            break
+        
+        
+        #utilizzo modello holistic
+        frame, results = place_landmarks(frame, holistic)
+
+        #se ho un risultato estraggo le coordinate dei landmarks, altrimenti imposto i landmark a None 
+        if results is not None:
+            
+            '''draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
+            # Show to screen
+            cv2.imshow('OpenCV Feed', frame)
+            # Break gracefully
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                break'''
+
+            landmarks = extract_landmarks(results)
+            #print(landmarks)
+            #landmarks=normalize_landmarks(landmarks)
+        else:
+            landmarks=None
+            
+
+        # Verifica se sono tutti NaN negli array di landmarks o se l'array è None, in tal caso skippo
+        if  landmarks is None or np.all(np.isnan(landmarks)) :
+            #print(":Non ci sono mani negli array di landmarks, salto questo frame.")
+            pass
+        
+        #Altrimenti verifico se ci sono nan ed eventualmente li sostituisco con 0, ed incremento il frame index
+        else:
+            nan_indices = np.isnan(landmarks)
+            landmarks[nan_indices] = 0
+            all_landmarks.append(landmarks)
+            frame_index+=1
+    
+    cap.release()
+    cv2.destroyAllWindows()
+
+    return all_landmarks,frame_index
+
+
+'''
+Process Landmarks, prende in input la directory contenente i video e ne salva i landmark su file npy,
+ crea il file con il count dei frame analizzati.
+'''
+def process_landmarks(dir):
+    #lista per i frames
+    frames=[]
+
+    #lista per i video sotto la directory
+    videos=os.listdir(dir)
+
+    #scorro tutti i video 
+    for video in videos:
+        #recupero l'azione descritta nel video
+        action=video.split("_")
+        action=action[0]
+        
+
+        #recupero l' il path del video 
+        input_video_path=os.path.join(dir,video)
+
+        # Get landmarks from video
+        all_landmarks, frame_count = get_video_landmarks(input_video_path)
+
+        #appendo il numero di frame nella lista (utile per avere contezza del numero di frame processati per ogni video)
+        frames.append(frame_count)
+
+        # Save landmarks to file
+        save_landmarks(np.array(all_landmarks),video.replace('.mp4',''))
+        print(f"Processed {video}")
+
+
+    # Salvo il frame count su file 
+    with open("frames.txt", "w") as file:
+        file.write("\n".join(map(str, frames)))
+        print("Frames count saved to frames.txt")
+
+
+
+#process_landmarks(dir=VIDEO_DIR)
+#use_camera()
