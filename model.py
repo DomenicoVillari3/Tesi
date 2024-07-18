@@ -35,7 +35,7 @@ model.add(Masking(mask_value=-99, input_shape=input_shape))
 
 model.add(LSTM(128, return_sequences=True, input_shape=input_shape))
 model.add(BatchNormalization())
-model.add(Dropout(0.2))
+model.add(Dropout(0.5))
     
 model.add(LSTM(128, return_sequences=False))
 model.add(BatchNormalization())
@@ -67,7 +67,7 @@ model.summary()
 
 res=model.predict(x_test)
 print(labels[np.argmax(res[11])])
-print(res[0])
+#print(res[0])
 print(labels[np.argmax(y_test[11])])
 
 

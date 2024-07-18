@@ -75,6 +75,13 @@ def place_landmarks(frame,model):
     Output=None 
 '''
 def draw_landmarks(results,frame,mp_drawing,mp_holistic):
+    
+    '''mp_face_mesh = mp.solutions.face_mesh
+    if results.face_landmarks:
+        mp_drawing.draw_landmarks(frame, results.face_landmarks, mp_face_mesh.FACEMESH_TESSELATION, 
+                                  mp_drawing.DrawingSpec(color=(80, 110, 10), thickness=1, circle_radius=1), 
+                                  mp_drawing.DrawingSpec(color=(80, 256, 121), thickness=1, circle_radius=1))'''
+
     if results.pose_landmarks:
         #print(len(results.pose_landmarks.landmark))
         mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
@@ -266,3 +273,4 @@ def process_landmarks(dir):
 
 #process_landmarks(dir=VIDEO_DIR)
 #use_camera()
+
