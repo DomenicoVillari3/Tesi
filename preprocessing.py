@@ -2,10 +2,10 @@ import os
 import random
 import numpy as np
 import cv2
-from argument import grayscale,flip,brightness_and_contrast,rotate,traslate,add_random_noise,show_video,blur,resize,color_jitter
+from argument import grayscale,flip,brightness_and_contrast,rotate,traslate,add_random_noise,show_video,blur,resize,color_jitter,change_fps
 import gc
 
-VIDEO_DIR = "/home/domenico/tesi/video"
+VIDEO_DIR = "/home/amministratore/Scrivania/virtual_env/villari/Tesi/video"
 
 def argument_videos(dir,labels_file="labels.txt"):
     labels=[]
@@ -38,9 +38,9 @@ def argument_videos(dir,labels_file="labels.txt"):
         out_video_path = os.path.join(dir, video + "_4.mp4")
         add_random_noise(input_video_path, out_video_path)
 
-        # Argumentation 5: Gray scale
+        # Argumentation 5: Add Random noise
         out_video_path = os.path.join(dir, video + "_5.mp4")
-        grayscale(input_video_path, out_video_path)
+        add_random_noise(input_video_path, out_video_path)
 
         # Argumentation 6: Increase brightness and contrast
         out_video_path = os.path.join(dir, video + "_6.mp4")
@@ -95,6 +95,22 @@ def argument_videos(dir,labels_file="labels.txt"):
                 traslate(input_video_path, out_video_path)
         gc.collect()
 
+        #Argumentation 9: raddoppio il numero di fps
+        out_video_path = os.path.join(dir, video + "_26" + ".mp4")
+        change_fps(input_video_path,out_video_path)
+
+        #Argumentation 10: cambio random della dimensione:
+        for i in range(26,31):
+            val=random.random()
+            out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
+            if i%2==1:
+                temp="temp.mp4"
+                flip(input_video_path, temp,1)
+                resize(temp, out_video_path,val)
+            else:
+                resize(input_video_path, out_video_path,val)
+
+    
     if os.path.exists("temp.mp4"):
         os.remove("temp.mp4")
         

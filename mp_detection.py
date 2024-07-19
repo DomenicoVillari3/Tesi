@@ -9,8 +9,8 @@ from time import sleep
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
-NUM_POINTS=126
-VIDEO_DIR = "/home/domenico/tesi/video"
+NUM_POINTS=135
+VIDEO_DIR = "video"
 
 
 '''FUNZIONE PER UTILIZZARE MEDIAPIPE SULLA WEBCAM
@@ -111,7 +111,18 @@ def extract_landmarks(results):
     # 33 punti per la posa 
     #21 per le mani 
 
-    #Punti totali 126 =(21*3)+(21*3)
+    #Punti totali 165 =(21*3)+(21*3)+(13*3)
+    pose_array=[]
+    if results.pose_landmarks:
+        for index,landmark in enumerate(results.pose_landmarks.landmark):
+            #prendo solo i primi 13 punti [0,12]
+            if index<=12:
+                pose_array.append((landmark.x, landmark.y, landmark.z))
+        pose_array=np.array(pose_array).flatten()
+    #altrimenti riempio di 0
+    else:
+        pose_array=np.zeros(13*3)
+
 
 
     #LEFT HAND
@@ -142,7 +153,11 @@ def extract_landmarks(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return ret
+        #se ci sono le mani vi appendo anche il corpo 
+        if len(pose_array)==0:
+            pose_array=np.zeros(13*3)
+
+        return  np.concatenate((ret,pose_array),axis=None)
     
 
 
@@ -271,6 +286,6 @@ def process_landmarks(dir):
 
 
 
-#process_landmarks(dir=VIDEO_DIR)
+process_landmarks(dir=VIDEO_DIR)
 #use_camera()
 
