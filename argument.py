@@ -272,6 +272,35 @@ def traslate(input_path,output_path):
     video.release()
     out.release()
 
+def change_fps(input_path, output_path):
+    cap = cv2.VideoCapture(input_path)
+ 
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    new_fps = original_fps * 2  # Nuovo FPS, raddoppiato
+
+    output = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), new_fps, (width, height))
+    
+    prev_frame = None
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        if prev_frame is not None:
+            #usa il frame precedente per duplicarlo
+            output.write(prev_frame)
+            output.write(frame)
+        else:
+            output.write(frame)
+        
+        prev_frame = frame
+    
+    cap.release()
+    output.release()
+
+
     
 
 
@@ -293,12 +322,13 @@ inp="/home/domenico/tesi/video/acqua_0.mp4"
 out="/home/domenico/tesi/video/acqua.mp4"
 
 #blur(inp, out,False)
-#flip(inp,out,1)
+#flip(inp,out,0)
 #traslate(inp,out)
 #resize(inp,out,1.5)
 #color_jitter(inp,out)
-#show_video(inp)
-#show_video(out)
+#change_fps(inp,out)
+show_video(inp)
+show_video(out)
 
 
 
