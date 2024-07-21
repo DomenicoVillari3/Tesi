@@ -204,6 +204,9 @@ def rotate(input_path, output_path):
 def resize(input_path,output_path,scale=0.5):
     # Leggi il video
     video = cv2.VideoCapture(input_path)
+    if not video.isOpened():
+        print(f"Error: Unable to open video file {input_path}")
+        return
 
     # Ottieni le proprietà del video
     frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -274,6 +277,9 @@ def traslate(input_path,output_path):
 
 def change_fps(input_path, output_path):
     cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        print(f"Error: Unable to open video file {input_path}")
+        return
  
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -327,8 +333,8 @@ out="/home/domenico/tesi/video/acqua.mp4"
 #resize(inp,out,1.5)
 #color_jitter(inp,out)
 #change_fps(inp,out)
-show_video(inp)
-show_video(out)
+#show_video(inp)
+#show_video(out)
 
 
 

@@ -5,7 +5,7 @@ import cv2
 from argument import grayscale,flip,brightness_and_contrast,rotate,traslate,add_random_noise,show_video,blur,resize,color_jitter,change_fps
 import gc
 
-VIDEO_DIR = "/home/amministratore/Scrivania/virtual_env/villari/Tesi/video"
+VIDEO_DIR = "video"
 
 def argument_videos(dir,labels_file="labels.txt"):
     labels=[]
@@ -16,54 +16,71 @@ def argument_videos(dir,labels_file="labels.txt"):
         print(input_video_path)
 
         #recupero il nome del file 
-        video=video.split("_0")
+        video=video.split("_")
+        number=video[1].split(".")[0]
         video=video[0]
+        
+        #print(number)
         #print(video)
         labels.append(video)
+
+        number=int(number)
         
+
         # Argumentation 1: Flip verticalmente
-        out_video_path = os.path.join(dir, video + "_1.mp4")
-        print(out_video_path)
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
+        #print(out_video_path)
         flip(input_video_path, out_video_path)
 
         # Argumentation 2: Flip orizzontalmente
-        out_video_path = os.path.join(dir, video + "_2.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         flip(input_video_path, out_video_path,1)
 
         # Argumentation 3: Flip orizzontalmente e verticalmente
-        out_video_path = os.path.join(dir, video + "_3.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         flip(input_video_path, out_video_path,-1)
 
         # Argumentation 4: Add random noise
-        out_video_path = os.path.join(dir, video + "_4.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         add_random_noise(input_video_path, out_video_path)
 
         # Argumentation 5: Add Random noise
-        out_video_path = os.path.join(dir, video + "_5.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         add_random_noise(input_video_path, out_video_path)
 
         # Argumentation 6: Increase brightness and contrast
-        out_video_path = os.path.join(dir, video + "_6.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         brightness_and_contrast(input_video_path, out_video_path)
 
         # Argumentation 7: Blur verticale
-        out_video_path = os.path.join(dir, video + "_7.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         blur(input_video_path, out_video_path,vertical=True)
 
         # Argumentation 8: Blur verticale
-        out_video_path = os.path.join(dir, video + "_8.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         blur(input_video_path, out_video_path,vertical=False)
 
         # Argumentation 9: Resize con riduzione del 50%
-        out_video_path=os.path.join(dir, video + "_9.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         resize(input_video_path, out_video_path,0.5)
 
         # Argumentation 10: Resize con aumento del 50%
-        out_video_path=os.path.join(dir, video + "_10.mp4")
+        number+=1
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         resize(input_video_path, out_video_path,1.5)
 
         # Argumentation 11: Color jitter (eseguito 5 volte)
-        for i in range(11,16):
+        number+=1
+        for i in range(number,number+5):
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             #su metà dei video uso la mano opposta a quella del video
             if i%2==0:
@@ -72,10 +89,11 @@ def argument_videos(dir,labels_file="labels.txt"):
                 color_jitter(temp, out_video_path)
             else:
                 color_jitter(input_video_path, out_video_path)
+        number+=5
                 
-
+        
         # Argumentation 12: Rotation (eseguita 5 volte)
-        for i in range(16,21):
+        for i in range(number,number+5):
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             if i%2==1:
                 temp="temp.mp4"
@@ -83,9 +101,11 @@ def argument_videos(dir,labels_file="labels.txt"):
                 rotate(temp, out_video_path)
             else:
                 rotate(input_video_path, out_video_path)
-        
+        number+=5
+
+
         #Argumentation 8: Traslation (eseguita 5 volte)
-        for i in range(21,26):
+        for i in range(number,number+5):
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             if i%2==0:
                 temp="temp.mp4"
@@ -94,13 +114,16 @@ def argument_videos(dir,labels_file="labels.txt"):
             else:
                 traslate(input_video_path, out_video_path)
         gc.collect()
+        number+=5
 
         #Argumentation 9: raddoppio il numero di fps
-        out_video_path = os.path.join(dir, video + "_26" + ".mp4")
+        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         change_fps(input_video_path,out_video_path)
 
-        #Argumentation 10: cambio random della dimensione:
-        for i in range(26,31):
+
+        number+=1
+        #Argumentation 10: cambio random della dimensione (eseguito 4 volte):
+        for i in range(number,number+4):
             val=random.random()
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             if i%2==1:
@@ -109,6 +132,7 @@ def argument_videos(dir,labels_file="labels.txt"):
                 resize(temp, out_video_path,val)
             else:
                 resize(input_video_path, out_video_path,val)
+        number+=4
 
     
     if os.path.exists("temp.mp4"):
@@ -116,7 +140,7 @@ def argument_videos(dir,labels_file="labels.txt"):
         
 
     with open(labels_file, 'w') as f:
-        for label in labels:
+        for label in set(labels):
             f.write(label + "\n")
 
         
