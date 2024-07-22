@@ -152,7 +152,8 @@ def extract_landmarks(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return ret
+        return np.concatenate((ret,pose_array),axis=None)
+        #return ret
     
 
 

@@ -3,7 +3,7 @@ import os
 from keras.utils import to_categorical
 import mediapipe as mp
 from keras.models import Sequential
-from keras.layers import LSTM, Dropout, Dense, BatchNormalization,Masking
+from keras.layers import LSTM, Dropout, Dense, BatchNormalization,Masking,Bidirectional
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from sklearn.preprocessing import StandardScaler
@@ -11,45 +11,21 @@ from create_dataset import get_labels
 from mp_detection import draw_landmarks,place_landmarks,extract_landmarks
 import cv2
 import numpy as np
+from model import create_model
 
 
 print("LABELS")
 labels=get_labels("labels.txt")
 labels=list(labels.keys())
 print("LABELS OTTENUTE")
-
-input_shape =(64,126)
-# Define LSTM model
-model = Sequential()
-
-model.add(Masking(mask_value=-99, input_shape=input_shape))
-#model.add(Masking(mask_value=0))
-
-model.add(LSTM(128, return_sequences=True, input_shape=input_shape))
-model.add(BatchNormalization())
-model.add(Dropout(0.2))
-    
-model.add(LSTM(128, return_sequences=False))
-model.add(BatchNormalization())
-model.add(Dropout(0.5))
-    
-model.add(Dense(64, activation='relu'))
-model.add(BatchNormalization())
-model.add(Dropout(0.5))
-
-model.add(Dense(len(labels), activation='softmax'))
-
+input_shape =(148,165)
+model=create_model(input_shape,labels)
 model.load_weights("weights.keras")
-
 print("MODELLO CARICATO")
-
-
-
-
 
 sequence=[] #64 frames
 sentence=[] 
-threshold=0.4
+threshold=0.9
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
@@ -76,19 +52,20 @@ while True:
         
         # Estrazione dei landmarks su un array unidimensionale
         landmarks=extract_landmarks(results)
+
     else:
-        continue
+        landmarks=np.full(165,-99)
 
     # Verifica se sono tutti NaN negli array di landmarks o se l'array è None, in tal caso skippo
     if  landmarks is None or np.all(np.isnan(landmarks)) :
         #print(":Non ci sono mani negli array di landmarks, salto questo frame.")
-        landmarks=np.full(126,-99)
+        landmarks=np.full(165,-99)
     
     sequence.append(landmarks)
     
-    sequence=sequence[-64:]
+    sequence=sequence[-input_shape[0]:]
     
-    if len(sequence)==64:
+    if len(sequence)==input_shape[0]:
         #passiamo 1 seq (1,64,162)
         res=model.predict(np.expand_dims(sequence,axis=0))[0]
         label=labels[np.argmax(res)]
@@ -104,7 +81,7 @@ while True:
             if len(sentence)>5:
                 sentence=sentence[-5:] 
             # Visualizza l'etichetta sul frame
-            cv2.putText(frame, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     # Mostra il frame
     cv2.imshow('Webcam', frame)

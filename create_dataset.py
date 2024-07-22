@@ -62,8 +62,8 @@ def read_file_npy(labels,source_dir="points"):
 
 
 #------------------------------------------------------------
-labels=get_labels(file="labels.txt")
-x,y=read_file_npy(labels=labels,source_dir="points")
+#labels=get_labels(file="labels.txt")
+#x,y=read_file_npy(labels=labels,source_dir="points")
 
-np.save("x.npy",x)
-np.save("y.npy",y)
+#np.save("x.npy",x)
+#np.save("y.npy",y)
