@@ -8,8 +8,8 @@ from time import sleep
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
-holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
-NUM_POINTS=126
+holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.75)
+NUM_POINTS=1575
 VIDEO_DIR = "/home/domenico/tesi/video"
 
 
@@ -41,7 +41,8 @@ def use_camera():
             # Estrazione dei landmarks su un array unidimensionale
             landmarks=extract_landmarks(results)
             #print(landmarks)
-            #print(len(landmarks))
+            #if landmarks is not None:
+            #    print(len(landmarks))
 
             #normalizzazione dei landmarks tra [0,1]
             #normalized_landmarks=normalize_landmarks(landmarks)
@@ -76,11 +77,11 @@ def place_landmarks(frame,model):
 '''
 def draw_landmarks(results,frame,mp_drawing,mp_holistic):
     
-    '''mp_face_mesh = mp.solutions.face_mesh
+    mp_face_mesh = mp.solutions.face_mesh
     if results.face_landmarks:
         mp_drawing.draw_landmarks(frame, results.face_landmarks, mp_face_mesh.FACEMESH_TESSELATION, 
                                   mp_drawing.DrawingSpec(color=(80, 110, 10), thickness=1, circle_radius=1), 
-                                  mp_drawing.DrawingSpec(color=(80, 256, 121), thickness=1, circle_radius=1))'''
+                                  mp_drawing.DrawingSpec(color=(80, 256, 121), thickness=1, circle_radius=1))
 
     if results.pose_landmarks:
         #print(len(results.pose_landmarks.landmark))
@@ -110,18 +111,30 @@ def extract_landmarks(results):
     # Array per i landmarks delle pose e delle mani 3D, se non c'è creo un array di 0 
     # 33 punti per la posa 
     #21 per le mani 
+    #Punti totali 171 =(21*3)+(21*3)+(15*3)+(468*3)
 
-    #Punti totali 126 =(21*3)+(21*3)
+    face_array = []
+    if results.face_landmarks:
+        for landmark in results.face_landmarks.landmark:
+            face_array.append((landmark.x, landmark.y, landmark.z))
+        face_array=np.array(face_array).flatten()
+        #print(len(face_array))
+        #altrimenti riempio di 0
+    else:
+        face_array=np.zeros(468*3)
+        
+
     pose_array=[]
     if results.pose_landmarks:
         for index,landmark in enumerate(results.pose_landmarks.landmark):
-            #prendo solo i primi 13 punti [0,12]
-            if index<=12:
+            #prendo solo i primi 15 punti [0,14#z]
+            if index<=14:
                 pose_array.append((landmark.x, landmark.y, landmark.z))
         pose_array=np.array(pose_array).flatten()
+        print(len(pose_array))
     #altrimenti riempio di 0
     else:
-        pose_array=np.zeros(13*3)
+        pose_array=np.zeros(15*3)
 
 
     #LEFT HAND
@@ -152,7 +165,7 @@ def extract_landmarks(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return np.concatenate((ret,pose_array),axis=None)
+        return np.concatenate((ret,pose_array,face_array),axis=None)
         #return ret
     
 
@@ -211,12 +224,12 @@ def get_video_landmarks(video_path):
         #se ho un risultato estraggo le coordinate dei landmarks, altrimenti imposto i landmark a None 
         if results is not None:
             
-            '''draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
+            draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
             # Show to screen
             cv2.imshow('OpenCV Feed', frame)
             # Break gracefully
             if cv2.waitKey(10) & 0xFF == ord('q'):
-                break'''
+                break
 
             landmarks = extract_landmarks(results)
             #print(landmarks)
@@ -255,7 +268,8 @@ def process_landmarks(dir):
     videos=os.listdir(dir)
 
     #scorro tutti i video 
-    for video in videos:
+    for i,video in enumerate(videos):
+        print("video: ",i)
         #recupero l'azione descritta nel video
         action=video.split("_")
         action=action[0]
@@ -282,5 +296,5 @@ def process_landmarks(dir):
 
 
 
-#process_landmarks(dir=VIDEO_DIR)
+process_landmarks(dir=VIDEO_DIR)
 #use_camera()

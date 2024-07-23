@@ -20,8 +20,7 @@ def capture_writer(input_path,output_path):
 
 def add_random_noise(input_path, output_path):
     video,out=capture_writer(input_path,output_path)
-    intensity=random.randint(25,30)
-
+    intensity=random.randint(15,60)
     while True:
         success, frame = video.read()
         
@@ -330,7 +329,8 @@ out="/home/domenico/tesi/video/acqua.mp4"
 #blur(inp, out,False)
 #flip(inp,out,0)
 #traslate(inp,out)
-#resize(inp,out,1.5)
+#resize(inp,out,0.1)
+#add_random_noise(inp,out)
 #color_jitter(inp,out)
 #change_fps(inp,out)
 #show_video(inp)

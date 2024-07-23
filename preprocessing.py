@@ -25,59 +25,74 @@ def argument_videos(dir,labels_file="labels.txt"):
         labels.append(video)
 
         number=int(number)
-        
-
-        # Argumentation 1: Flip verticalmente
-        number+=1
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        #print(out_video_path)
-        flip(input_video_path, out_video_path)
-
-        # Argumentation 2: Flip orizzontalmente
+    
+        # Argumentation 1: Flip orizzontalmente
         number+=1
         out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         flip(input_video_path, out_video_path,1)
 
-        # Argumentation 3: Flip orizzontalmente e verticalmente
-        number+=1
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        flip(input_video_path, out_video_path,-1)
 
-        # Argumentation 4: Add random noise
+        # Argumentation 2: Add random noise
         number+=1
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        add_random_noise(input_video_path, out_video_path)
+        for i in range(number,number+5):
+            out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
+            #su metà dei video uso la mano opposta a quella del video
+            if i%2==0:
+                temp="temp.mp4"
+                flip(input_video_path, temp,1)
+                add_random_noise(temp, out_video_path)
+            else:
+                add_random_noise(input_video_path, out_video_path)
+        number+=5
 
-        # Argumentation 5: Add Random noise
-        number+=1
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        add_random_noise(input_video_path, out_video_path)
-
-        # Argumentation 6: Increase brightness and contrast
+        # Argumentation 3: Increase brightness and contrast
         number+=1
         out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         brightness_and_contrast(input_video_path, out_video_path)
 
-        # Argumentation 7: Blur verticale
+        # Argumentation 4: Blur verticale
         number+=1
         out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         blur(input_video_path, out_video_path,vertical=True)
 
-        # Argumentation 8: Blur verticale
+        # Argumentation 5: Blur verticale
         number+=1
         out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
         blur(input_video_path, out_video_path,vertical=False)
 
-        # Argumentation 9: Resize con riduzione del 50%
-        number+=1
+        #Argumentation 6: raddoppio il numero di fps
         out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        resize(input_video_path, out_video_path,0.5)
+        change_fps(input_video_path,out_video_path)
 
-        # Argumentation 10: Resize con aumento del 50%
+        # Argumentation 7: resizing
         number+=1
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        resize(input_video_path, out_video_path,1.5)
+        for i in range(number,number+5):
+            size=random.uniform(1.2, 1.8)
+            out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
+            #su metà dei video uso la mano opposta a quella del video
+            if i%2==0:
+                temp="temp.mp4"
+                flip(input_video_path, temp,1)
+                resize(input_video_path, out_video_path,size)
+            else:
+                resize(input_video_path, out_video_path,size)
+        number+=5
 
+        # Argumentation 8: resizing
+        number+=1
+        for i in range(number,number+5):
+            size=random.uniform(0.2, 0.7)
+            out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
+            #su metà dei video uso la mano opposta a quella del video
+            if i%2==0:
+                temp="temp.mp4"
+                flip(input_video_path, temp,1)
+                resize(input_video_path, out_video_path,size)
+            else:
+                resize(input_video_path, out_video_path,size)
+        number+=5
+
+       
         # Argumentation 11: Color jitter (eseguito 5 volte)
         number+=1
         for i in range(number,number+5):
@@ -115,24 +130,7 @@ def argument_videos(dir,labels_file="labels.txt"):
                 traslate(input_video_path, out_video_path)
         gc.collect()
         number+=5
-
-        #Argumentation 9: raddoppio il numero di fps
-        out_video_path = os.path.join(dir, video + "_{}.mp4".format(number))
-        change_fps(input_video_path,out_video_path)
-
-
-        number+=1
-        #Argumentation 10: cambio random della dimensione (eseguito 4 volte):
-        for i in range(number,number+4):
-            val=random.random()
-            out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
-            if i%2==1:
-                temp="temp.mp4"
-                flip(input_video_path, temp,1)
-                resize(temp, out_video_path,val)
-            else:
-                resize(input_video_path, out_video_path,val)
-        number+=4
+       
 
     
     if os.path.exists("temp.mp4"):
