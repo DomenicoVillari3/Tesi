@@ -1,6 +1,7 @@
 import os
 import re
 import tensorflow
+import sys
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 import json
@@ -70,5 +71,6 @@ def main():
     np.save("y.npy",y)
 
 if __name__=="__main__":
-    #main()
-    pass
+    if len(sys.argv)==2:
+        if sys.argv[1]=='-c' or sys.argv[1]=='-create':
+            main()

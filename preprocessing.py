@@ -66,7 +66,7 @@ def argument_videos(dir,labels_file="labels.txt"):
 
         # Argumentation 7: resizing
         number+=1
-        for i in range(number,number+5):
+        for i in range(number,number+6):
             size=random.uniform(1.2, 1.8)
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             #su metà dei video uso la mano opposta a quella del video
@@ -76,11 +76,11 @@ def argument_videos(dir,labels_file="labels.txt"):
                 resize(input_video_path, out_video_path,size)
             else:
                 resize(input_video_path, out_video_path,size)
-        number+=5
+        number+=6
 
         # Argumentation 8: resizing
         number+=1
-        for i in range(number,number+5):
+        for i in range(number,number+6):
             size=random.uniform(0.2, 0.7)
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             #su metà dei video uso la mano opposta a quella del video
@@ -90,7 +90,7 @@ def argument_videos(dir,labels_file="labels.txt"):
                 resize(input_video_path, out_video_path,size)
             else:
                 resize(input_video_path, out_video_path,size)
-        number+=5
+        number+=6
 
        
         # Argumentation 11: Color jitter (eseguito 5 volte)
@@ -120,7 +120,7 @@ def argument_videos(dir,labels_file="labels.txt"):
 
 
         #Argumentation 8: Traslation (eseguita 5 volte)
-        for i in range(number,number+5):
+        for i in range(number,number+6):
             out_video_path = os.path.join(dir, video + "_" + str(i) + ".mp4")
             if i%2==0:
                 temp="temp.mp4"
@@ -129,7 +129,7 @@ def argument_videos(dir,labels_file="labels.txt"):
             else:
                 traslate(input_video_path, out_video_path)
         gc.collect()
-        number+=5
+        number+=6
        
 
     

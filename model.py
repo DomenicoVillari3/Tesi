@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import LSTM, Dropout, Dense, BatchNormalization,Masking,Bidirectional
@@ -118,5 +119,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    pass
+    if len(sys.argv)==2:
+        if sys.argv[1]=='-t' or sys.argv[1]=='-train':
+            main()
+
+        
+    

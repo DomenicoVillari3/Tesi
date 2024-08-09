@@ -2,7 +2,10 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import os 
+import sys
+
 from coordinate_sferiche import coordinate_sferiche
+from get_angle import get_angle
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
@@ -10,6 +13,9 @@ mp_drawing = mp.solutions.drawing_utils
 holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
 NUM_POINTS=1575
 VIDEO_DIR = "/home/domenico/tesi/video"
+POINTS_DIR_NAME="angles"
+FRAMES_FILENAME="frames_angles.txt"
+
 
 
 '''FUNZIONE PER UTILIZZARE MEDIAPIPE SULLA WEBCAM
@@ -38,8 +44,15 @@ def use_camera():
             draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
             
             # Estrazione dei landmarks su un array unidimensionale
-            landmarks=extract_landmarks(results)
-            #print(landmarks)
+            if len(sys.argv)==3:
+                if sys.argv[2]=="-a" or sys.argv[2]=='--angles':
+                    landmarks=extract_landmarks_angles(results)
+                else:
+                    landmarks=extract_landmarks_points(results)
+            else:
+                landmarks=extract_landmarks_points(results)
+            
+            print(landmarks)
             #if landmarks is not None:
             #    print(len(landmarks))
 
@@ -106,22 +119,73 @@ def draw_landmarks(results,frame,mp_drawing,mp_holistic):
     Input=risultati del modello holistic
     Output=array ad 1 dim con i landmark
 '''
-def extract_landmarks(results):
+
+def extract_landmarks_angles(results):
+
+    #LEFT HAND
+    hand_left_array = []
+    if results.left_hand_landmarks:
+        
+        ang1=get_angle((results.left_hand_landmarks.landmark[4].x,results.left_hand_landmarks.landmark[4].y),
+                    (results.left_hand_landmarks.landmark[0].x,results.left_hand_landmarks.landmark[0].y),
+                    (results.left_hand_landmarks.landmark[20].x,results.left_hand_landmarks.landmark[20].y))
+        ang2=get_angle((results.left_hand_landmarks.landmark[8].x,results.left_hand_landmarks.landmark[8].y),
+                    (results.left_hand_landmarks.landmark[5].x,results.left_hand_landmarks.landmark[5].y),
+                    (results.left_hand_landmarks.landmark[12].x,results.left_hand_landmarks.landmark[12].y))
+        ang3=get_angle((results.left_hand_landmarks.landmark[12].x,results.left_hand_landmarks.landmark[12].y),
+                    (results.left_hand_landmarks.landmark[13].x,results.left_hand_landmarks.landmark[13].y),
+                    (results.left_hand_landmarks.landmark[16].x,results.left_hand_landmarks.landmark[16].y))
+        hand_left_array.append((ang1,ang2,ang3))
+            
+        hand_left_array= np.array(hand_left_array).flatten()
+    else:
+        #ANGOLI
+        hand_left_array=np.zeros(3)  
+    
+    #RIGHT HAND
+    hand_right_array = []
+    if results.right_hand_landmarks:
+        ang1=get_angle((results.right_hand_landmarks.landmark[4].x,results.right_hand_landmarks.landmark[4].y),
+                    (results.right_hand_landmarks.landmark[0].x,results.right_hand_landmarks.landmark[0].y),
+                    (results.right_hand_landmarks.landmark[20].x,results.right_hand_landmarks.landmark[20].y))
+        ang2=get_angle((results.right_hand_landmarks.landmark[8].x,results.right_hand_landmarks.landmark[8].y),
+                    (results.right_hand_landmarks.landmark[5].x,results.right_hand_landmarks.landmark[5].y),
+                    (results.right_hand_landmarks.landmark[12].x,results.right_hand_landmarks.landmark[12].y))
+        ang3=get_angle((results.right_hand_landmarks.landmark[12].x,results.right_hand_landmarks.landmark[12].y),
+                    (results.right_hand_landmarks.landmark[13].x,results.right_hand_landmarks.landmark[13].y),
+                    (results.right_hand_landmarks.landmark[16].x,results.right_hand_landmarks.landmark[16].y))
+        hand_right_array.append((ang1,ang2,ang3))
+            
+        hand_right_array= np.array(hand_right_array).flatten()
+    else:
+        #ANGOLI
+        hand_right_array=np.zeros(3)  
+    
+    ret=np.concatenate((hand_left_array, hand_right_array),axis=None) 
+    if np.all(ret == 0) or len(ret) == 0 or len(ret)<6:
+        return None
+    else:
+        return ret
+
+    
+    
+
+def extract_landmarks_points(results):
     # Array per i landmarks delle pose e delle mani 3D, se non c'è creo un array di 0 
     # 33 punti per la posa 
     #21 per le mani 
-    #Punti totali 171 =(21*3)+(21*3)+(15*3)
+    #Punti totali 1575 =(21*3)+(21*3)+(15*3)+(468*3)
     #1575
 
     #FACE MESH
     face_array = []
     if results.face_landmarks:
         for landmark in results.face_landmarks.landmark:
-            #face_array.append((landmark.x, landmark.y, landmark.z))
+            face_array.append((landmark.x, landmark.y, landmark.z))
 
-            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
-            face_array.append((rho,theta,phi))
-            
+            #rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            #face_array.append((rho,theta,phi))
+
         face_array=np.array(face_array).flatten()
         #print(len(face_array))
     #altrimenti riempio di 0
@@ -134,10 +198,10 @@ def extract_landmarks(results):
         for index,landmark in enumerate(results.pose_landmarks.landmark):
             #prendo solo i primi 15 punti [0,14]
             if index<=14:
-                #pose_array.append((landmark.x, landmark.y, landmark.z))
+                pose_array.append((landmark.x, landmark.y, landmark.z))
 
-                rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
-                pose_array.append((rho,theta,phi))
+                #rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+                #pose_array.append((rho,theta,phi))
 
         pose_array=np.array(pose_array).flatten()
         
@@ -151,10 +215,10 @@ def extract_landmarks(results):
     #se viene rilevata la mano appendo le coordinate alla lista
     if results.left_hand_landmarks:
         for landmark in results.left_hand_landmarks.landmark:
-            #hand_left_array.append((landmark.x, landmark.y, landmark.z))
+            hand_left_array.append((landmark.x, landmark.y, landmark.z))
 
-            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
-            hand_left_array.append((rho,theta,phi))
+            #rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            #hand_left_array.append((rho,theta,phi))
 
         hand_left_array=np.array(hand_left_array).flatten()
     #altrimenti riempio di 0
@@ -166,14 +230,16 @@ def extract_landmarks(results):
     hand_right_array = []
     if results.right_hand_landmarks:
         for landmark in results.right_hand_landmarks.landmark:
-            #hand_right_array.append((landmark.x, landmark.y, landmark.z))
+            #POINTS
+            hand_right_array.append((landmark.x, landmark.y, landmark.z))
 
-            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
-            hand_right_array.append((rho,theta,phi))
-
+            #COORDINATE ANGOLARI
+            #rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            #hand_right_array.append((rho,theta,phi))
 
         hand_right_array= np.array(hand_right_array).flatten()
     else:
+        #PUNTI E COORD ANGOLARI
         hand_right_array=np.zeros(21*3)
     
     #torno un array ad 1 dimensione (126,)
@@ -183,7 +249,6 @@ def extract_landmarks(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        #return np.concatenate((ret,pose_array),axis=None)
         return  np.concatenate((ret,pose_array,face_array),axis=None)
         #return ret
     
@@ -206,7 +271,7 @@ def normalize_landmarks(landmarks):
 
 def save_landmarks(landmarks, action):
     # Creo una directory ds
-    dir = "points"
+    dir = POINTS_DIR_NAME
     if not os.path.exists(dir):
         os.makedirs(dir)
     
@@ -250,7 +315,14 @@ def get_video_landmarks(video_path):
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 break'''
 
-            landmarks = extract_landmarks(results)
+            if len(sys.argv)==3:
+                if sys.argv[2]=="-a" or sys.argv[2]=='--angles':
+                    landmarks=extract_landmarks_angles(results)
+                else:
+                    landmarks=extract_landmarks_points(results)
+            else:
+                landmarks=extract_landmarks_points(results)
+            
             #print(landmarks)
             #landmarks=normalize_landmarks(landmarks)
         else:
@@ -309,11 +381,21 @@ def process_landmarks(dir):
 
 
     # Salvo il frame count su file 
-    with open("frames.txt", "w") as file:
+    with open(FRAMES_FILENAME, "w") as file:
         file.write("\n".join(map(str, frames)))
         print("Frames count saved to frames.txt")
 
 
 
-process_landmarks(dir=VIDEO_DIR)
-#use_camera()
+print(f"sys.argv: {sys.argv}")
+if len(sys.argv)>= 1:
+    if sys.argv[1] == '-p' or sys.argv[1] == '--process':
+        process_landmarks(dir=VIDEO_DIR)
+
+    elif sys.argv[1]=="-c" or sys.argv[1] == '--camera':
+        use_camera()
+
+    else:
+        print(f"Unrecognized argument: {sys.argv[1]}")
+else:
+    print("No arguments provided.")
