@@ -18,19 +18,21 @@ print("LABELS")
 labels=get_labels("labels.txt")
 labels=list(labels.keys())
 print("LABELS OTTENUTE")
-input_shape =(148,165)
+input_shape=(131,171)
+#input_shape=(148,171) #lettere
+#input_shape =(134,171) 
 model=create_model(input_shape,labels)
 model.load_weights("weights.keras")
 print("MODELLO CARICATO")
 
 sequence=[] #64 frames
 sentence=[] 
-threshold=0.9
+threshold=0.75
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
-holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
+holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.7)
 
 # Apri la webcam
 cap = cv2.VideoCapture(0)
@@ -54,22 +56,26 @@ while True:
         landmarks=extract_landmarks(results)
 
     else:
-        landmarks=np.full(165,-99)
+        landmarks=np.full(input_shape[1],-99)
 
     # Verifica se sono tutti NaN negli array di landmarks o se l'array è None, in tal caso skippo
     if  landmarks is None or np.all(np.isnan(landmarks)) :
         #print(":Non ci sono mani negli array di landmarks, salto questo frame.")
-        landmarks=np.full(165,-99)
+        landmarks=np.full(input_shape[1],-99)
     
     sequence.append(landmarks)
     
     sequence=sequence[-input_shape[0]:]
+
+    if np.all(sequence == -99):
+        sequence = []
+        continue
     
     if len(sequence)==input_shape[0]:
         #passiamo 1 seq (1,64,162)
         res=model.predict(np.expand_dims(sequence,axis=0))[0]
         label=labels[np.argmax(res)]
-        #print(label)
+        print(label)
         print(res[np.argmax(res)])
         if res[np.argmax(res)] >= threshold:
             if len(sentence)>0:
@@ -81,7 +87,9 @@ while True:
             if len(sentence)>5:
                 sentence=sentence[-5:] 
             # Visualizza l'etichetta sul frame
-        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            sequence=sequence[-input_shape[0]:]
+
+        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
     # Mostra il frame
     cv2.imshow('Webcam', frame)

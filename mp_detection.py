@@ -2,13 +2,12 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import os 
-import json
-from time import sleep
+from coordinate_sferiche import coordinate_sferiche
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
-holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.75)
+holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
 NUM_POINTS=1575
 VIDEO_DIR = "/home/domenico/tesi/video"
 
@@ -111,15 +110,21 @@ def extract_landmarks(results):
     # Array per i landmarks delle pose e delle mani 3D, se non c'è creo un array di 0 
     # 33 punti per la posa 
     #21 per le mani 
-    #Punti totali 171 =(21*3)+(21*3)+(15*3)+(468*3)
+    #Punti totali 171 =(21*3)+(21*3)+(15*3)
+    #1575
 
+    #FACE MESH
     face_array = []
     if results.face_landmarks:
         for landmark in results.face_landmarks.landmark:
-            face_array.append((landmark.x, landmark.y, landmark.z))
+            #face_array.append((landmark.x, landmark.y, landmark.z))
+
+            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            face_array.append((rho,theta,phi))
+            
         face_array=np.array(face_array).flatten()
         #print(len(face_array))
-        #altrimenti riempio di 0
+    #altrimenti riempio di 0
     else:
         face_array=np.zeros(468*3)
         
@@ -127,11 +132,15 @@ def extract_landmarks(results):
     pose_array=[]
     if results.pose_landmarks:
         for index,landmark in enumerate(results.pose_landmarks.landmark):
-            #prendo solo i primi 15 punti [0,14#z]
+            #prendo solo i primi 15 punti [0,14]
             if index<=14:
-                pose_array.append((landmark.x, landmark.y, landmark.z))
+                #pose_array.append((landmark.x, landmark.y, landmark.z))
+
+                rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+                pose_array.append((rho,theta,phi))
+
         pose_array=np.array(pose_array).flatten()
-        print(len(pose_array))
+        
     #altrimenti riempio di 0
     else:
         pose_array=np.zeros(15*3)
@@ -142,7 +151,11 @@ def extract_landmarks(results):
     #se viene rilevata la mano appendo le coordinate alla lista
     if results.left_hand_landmarks:
         for landmark in results.left_hand_landmarks.landmark:
-            hand_left_array.append((landmark.x, landmark.y, landmark.z))
+            #hand_left_array.append((landmark.x, landmark.y, landmark.z))
+
+            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            hand_left_array.append((rho,theta,phi))
+
         hand_left_array=np.array(hand_left_array).flatten()
     #altrimenti riempio di 0
     else:
@@ -153,7 +166,12 @@ def extract_landmarks(results):
     hand_right_array = []
     if results.right_hand_landmarks:
         for landmark in results.right_hand_landmarks.landmark:
-            hand_right_array.append((landmark.x, landmark.y, landmark.z))
+            #hand_right_array.append((landmark.x, landmark.y, landmark.z))
+
+            rho,theta,phi=coordinate_sferiche(landmark.x, landmark.y, landmark.z)
+            hand_right_array.append((rho,theta,phi))
+
+
         hand_right_array= np.array(hand_right_array).flatten()
     else:
         hand_right_array=np.zeros(21*3)
@@ -165,7 +183,8 @@ def extract_landmarks(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return np.concatenate((ret,pose_array,face_array),axis=None)
+        #return np.concatenate((ret,pose_array),axis=None)
+        return  np.concatenate((ret,pose_array,face_array),axis=None)
         #return ret
     
 
@@ -224,12 +243,12 @@ def get_video_landmarks(video_path):
         #se ho un risultato estraggo le coordinate dei landmarks, altrimenti imposto i landmark a None 
         if results is not None:
             
-            draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
+            '''draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
             # Show to screen
             cv2.imshow('OpenCV Feed', frame)
             # Break gracefully
             if cv2.waitKey(10) & 0xFF == ord('q'):
-                break
+                break'''
 
             landmarks = extract_landmarks(results)
             #print(landmarks)

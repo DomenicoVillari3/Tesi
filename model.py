@@ -6,7 +6,9 @@ from keras.layers import LSTM, Dropout, Dense, BatchNormalization,Masking,Bidire
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report,confusion_matrix,ConfusionMatrixDisplay
 from create_dataset import get_labels
+import matplotlib.pyplot as plt
 
 def create_model(input_shape,labels):
     # Define LSTM model
@@ -25,10 +27,47 @@ def create_model(input_shape,labels):
         
     model.add(Dense(190, activation='relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.30))
+    model.add(Dropout(0.3))
 
     model.add(Dense(len(labels), activation='softmax'))
     return model
+
+def evaluate_model(model,xtest,ytest,history,model_name=""):
+    loss, acc = model.evaluate(xtest, ytest, verbose=0)
+    print('Test Loss:', loss)
+    print('Test Accuracy:', acc)
+
+    # Plot training & validation accuracy values
+    plt.plot(history.history['categorical_accuracy'])
+    plt.plot(history.history['val_categorical_accuracy'])
+    plt.title('Model accuracy '+model_name)
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+    # Plot training & validation loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+    # Confusion matrix
+    prediction=model.predict(xtest)
+    #recupero lista con gli indici corrispondenti ai risultati corretti nelle label
+    ytrue=np.argmax(ytest,axis=1).tolist()
+    ypredicted=np.argmax(prediction, axis=1).tolist()
+    
+    confusion_m=confusion_matrix(ytrue,ypredicted)
+    display=ConfusionMatrixDisplay(confusion_m)
+    display.plot()
+    plt.show()
+
+
+
 
 
 
@@ -66,9 +105,10 @@ def main():
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
     model_checkpoint = ModelCheckpoint('weights.keras', monitor='val_loss', save_best_only=True)
 
-    model.fit(x_train, y_train, epochs=2000, verbose=1,validation_data=(x_test, y_test), callbacks=[early_stopping, model_checkpoint])
-    loss,accuracy=model.evaluate(x_test,y_test)
+    history=model.fit(x_train, y_train, epochs=2000, verbose=1,validation_data=(x_test, y_test), callbacks=[early_stopping, model_checkpoint])
     model.summary()
+
+    evaluate_model(model,x_test,y_test,history,"Coordinate Angolari")
 
     res=model.predict(x_test)
     print(labels[np.argmax(res[11])])
@@ -78,5 +118,5 @@ def main():
 
 
 if __name__ == '__main__':
-    #main()
+    main()
     pass
