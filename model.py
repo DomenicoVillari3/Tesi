@@ -21,14 +21,14 @@ def create_model(input_shape,labels):
     #model.add(LSTM(128, return_sequences=True, input_shape=input_shape))
     #model.add(BatchNormalization())
     #model.add(Dropout(0.5))
-    model.add(Bidirectional(LSTM(73, return_sequences=False)))   
-    #model.add(LSTM(73, return_sequences=False))
+    #model.add(Bidirectional(LSTM(73, return_sequences=False)))   
+    model.add(LSTM(73, return_sequences=False))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
         
     model.add(Dense(190, activation='relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.35))
 
     model.add(Dense(len(labels), activation='softmax'))
     return model
@@ -109,7 +109,7 @@ def main():
     history=model.fit(x_train, y_train, epochs=2000, verbose=1,validation_data=(x_test, y_test), callbacks=[early_stopping, model_checkpoint])
     model.summary()
 
-    evaluate_model(model,x_test,y_test,history,"Coordinate Angolari")
+    evaluate_model(model,x_test,y_test,history,MODEL_NAME)
 
     res=model.predict(x_test)
     print(labels[np.argmax(res[11])])
@@ -117,10 +117,10 @@ def main():
     print(labels[np.argmax(y_test[11])])
 
 
-
+MODEL_NAME="Angles"
 if __name__ == '__main__':
     if len(sys.argv)==2:
-        if sys.argv[1]=='-t' or sys.argv[1]=='-train':
+        if sys.argv[1]=='-t' or sys.argv[1]=='--train':
             main()
 
         

@@ -72,5 +72,5 @@ def main():
 
 if __name__=="__main__":
     if len(sys.argv)==2:
-        if sys.argv[1]=='-c' or sys.argv[1]=='-create':
+        if sys.argv[1]=='-c' or sys.argv[1]=='--create':
             main()

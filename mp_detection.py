@@ -13,8 +13,8 @@ mp_drawing = mp.solutions.drawing_utils
 holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
 NUM_POINTS=1575
 VIDEO_DIR = "/home/domenico/tesi/video"
-POINTS_DIR_NAME="angles"
-FRAMES_FILENAME="frames_angles.txt"
+POINTS_DIR_NAME="points"
+FRAMES_FILENAME="frames.txt"
 
 
 
@@ -249,7 +249,8 @@ def extract_landmarks_points(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return  np.concatenate((ret,pose_array,face_array),axis=None)
+        return  np.concatenate((ret,pose_array),axis=None)
+        #return  np.concatenate((ret,pose_array,face_array),axis=None)
         #return ret
     
 

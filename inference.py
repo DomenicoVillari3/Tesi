@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import  sys
 from keras.utils import to_categorical
 import mediapipe as mp
 from keras.models import Sequential
@@ -8,7 +9,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from sklearn.preprocessing import StandardScaler
 from create_dataset import get_labels
-from mp_detection import draw_landmarks,place_landmarks,extract_landmarks
+from mp_detection import draw_landmarks,place_landmarks,extract_landmarks_points,extract_landmarks_angles
 import cv2
 import numpy as np
 from model import create_model
@@ -52,8 +53,11 @@ while True:
         #Disegna landmarks
         draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
         
-        # Estrazione dei landmarks su un array unidimensionale
-        landmarks=extract_landmarks(results)
+        if len(sys.argv)==2 and (sys.argv[1]=='-a' or sys.argv[1]=='--angles'):
+            landmarks=extract_landmarks_angles(results)
+        else:
+            # Estrazione dei landmarks su un array unidimensionale
+            landmarks=extract_landmarks_points(results)
 
     else:
         landmarks=np.full(input_shape[1],-99)
