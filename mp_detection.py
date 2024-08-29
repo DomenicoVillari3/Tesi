@@ -389,7 +389,7 @@ def process_landmarks(dir):
 
 
 print(f"sys.argv: {sys.argv}")
-if len(sys.argv)>= 1:
+if len(sys.argv)> 1:
     if sys.argv[1] == '-p' or sys.argv[1] == '--process':
         process_landmarks(dir=VIDEO_DIR)
 
