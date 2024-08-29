@@ -117,7 +117,7 @@ def main():
     print(labels[np.argmax(y_test[11])])
 
 
-MODEL_NAME="Angles"
+MODEL_NAME=""
 if __name__ == '__main__':
     if len(sys.argv)==2:
         if sys.argv[1]=='-t' or sys.argv[1]=='--train':

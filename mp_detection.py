@@ -1,3 +1,9 @@
+'''CODICE CHE SCORRE I VIDEO NELLA VIDEO_DIR E NE ESEGUE LE COMPUTAZIONI TRAMITE MEDIAPIPE PER ESTRARNE I PUNTI 
+HA 3 MODALITA' DI ESECUZIONE:
+-  57 PUNTI (mani e busto )-> python3 mp_detection -p (--process
+- 525 PUNTI (mani, busto e face mesh )-> python3 mp_detection -p -f (--process , --face) 
+- 6 angoli (rapprentante gli angoli delle mani) -> python3 mp_detection -p -a (--process --angles)
+'''
 import cv2 
 import mediapipe as mp
 import numpy as np
@@ -11,7 +17,6 @@ from get_angle import get_angle
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 holistic = mp_holistic.Holistic(min_detection_confidence=0.5,min_tracking_confidence=0.5)
-NUM_POINTS=1575
 VIDEO_DIR = "/home/domenico/tesi/video"
 POINTS_DIR_NAME="points"
 FRAMES_FILENAME="frames.txt"
@@ -249,9 +254,12 @@ def extract_landmarks_points(results):
     if np.all(ret == 0) or len(ret) == 0:
         return None
     else:
-        return  np.concatenate((ret,pose_array),axis=None)
-        #return  np.concatenate((ret,pose_array,face_array),axis=None)
-        #return ret
+        if len(sys.argv)==3 and (sys.argv[2]=="--face" or sys.argv[2]=='-f'):
+            return  np.concatenate((ret,pose_array,face_array),axis=None)
+        else:
+            return  np.concatenate((ret,pose_array),axis=None)
+        
+    
     
 
 
@@ -316,11 +324,8 @@ def get_video_landmarks(video_path):
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 break'''
 
-            if len(sys.argv)==3:
-                if sys.argv[2]=="-a" or sys.argv[2]=='--angles':
-                    landmarks=extract_landmarks_angles(results)
-                else:
-                    landmarks=extract_landmarks_points(results)
+            if len(sys.argv)==3 and (sys.argv[2]=="-a" or sys.argv[2]=='--angles'):
+                landmarks=extract_landmarks_angles(results)
             else:
                 landmarks=extract_landmarks_points(results)
             
@@ -340,6 +345,7 @@ def get_video_landmarks(video_path):
             nan_indices = np.isnan(landmarks)
             landmarks[nan_indices] = 0
             all_landmarks.append(landmarks)
+            #print(len(landmarks))
             frame_index+=1
     
     cap.release()

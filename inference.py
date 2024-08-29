@@ -28,7 +28,7 @@ print("MODELLO CARICATO")
 
 sequence=[] #64 frames
 sentence=[] 
-threshold=0.75
+threshold=0.7
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
