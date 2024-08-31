@@ -54,6 +54,7 @@ def read_file_npy(labels,source_dir="points"):
     
     #padding per avere misure omogenee
     x=pad_sequences(x,maxlen=None, padding='post', dtype='float32',value=-99)
+    y=to_categorical(y,num_classes=len(labels)).astype(int)
     
     print(np.shape(x))
     print(np.shape(y))

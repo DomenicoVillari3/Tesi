@@ -78,7 +78,7 @@ def main():
 
     x=np.load("x.npy")
     y=np.load("y.npy")
-    y=to_categorical(y,num_classes=len(labels)).astype(int)
+    
 
 
     x_train,x_test,y_train,y_test=train_test_split(x,y,train_size=0.85,random_state=11)
