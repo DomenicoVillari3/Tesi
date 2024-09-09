@@ -20,7 +20,7 @@ def write_on_file(gen,individui,filename):
 
             for individuo in individui:
                 # Estrae i geni dall'individuo corrente e li  metto in una lista
-                geni=[individuo.dna["n_strati_convoluzionali"],individuo.dna["dimensione_strati_convoluzionali"],
+                geni=[individuo.dna["n_strati_LSTM"],individuo.dna["dimensione_strati_LSTM"],
                       individuo.dna["n_strati_densi"],individuo.dna["dimensione_strati_densi"]]
                 
                 #scrivo su file
@@ -34,13 +34,13 @@ def write_on_file(gen,individui,filename):
 def main():
     running=True #flag per controllare se l'algoritmo ha terminato
     generation=1 #numero di generazione corrente VA CAMBIATO SE VA FATTO IL RESUME 
-    pop=Population(size=20) #popolazione iniziale di 20 individui
+    pop=Population(size=20,file="individui.txt") #popolazione iniziale di 20 individui
 
     while running:
         print("Generazione: ", generation,"con ",len(pop.individuals)," individui")
         pop.select()    #seleziono gli individui
 
-        write_on_file(generation,pop.individuals,"AI\progetto\Generazione.csv") #scrivo su file.csv la generazione corrente
+        write_on_file(generation,pop.individuals,"Generazione.csv") #scrivo su file.csv la generazione corrente
 
         print("crossover su generazione", generation) 
         pop.crossover() #fase di crossover
@@ -52,10 +52,10 @@ def main():
         i=pop.get_best_Individual() #recupero l'individuo che ha la miglior accuracy
         print("BEST INDIVIDUAL: ",i.dna)
         
-        if i.dna["fitness"]>=0.91: #controlla se l'individuo ha un accuracy soddisfacente
+        if i.dna["fitness"]>=0.85: #controlla se l'individuo ha un accuracy soddisfacente
             running=False  #interrompo l'esecuzione 
             print("BEST INDIVIDUAL TROVATO : ",i.dna)
-            #write_on_file(generation,pop.individuals,"AI\progetto\Generazione.csv") #messo per scrivere anche quando trova l'individu0
+            write_on_file(generation,pop.individuals,"Generazione.csv") #messo per scrivere anche quando trova l'individu0
         
         generation+=1
     

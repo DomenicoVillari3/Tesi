@@ -18,9 +18,11 @@ labels=list(labels.keys())
 
 class NeuralNetwork:
     def __init__(self, n_lstm, d_lstm, n_densi, d_densi):
+        x = np.load("x.npy")    
+        self.input_shape=(x.shape[1], x.shape[2])
         self.labels = get_labels("labels.txt")
         self.labels = np.array(self.labels)
-        print(n_lstm, d_lstm, n_densi, d_densi)
+        print(n_lstm, d_lstm, n_densi, d_densi,self.input_shape)
         self.model = self.build_model(n_lstm, d_lstm, n_densi, d_densi)
     
     def load_data(self):
@@ -33,20 +35,20 @@ class NeuralNetwork:
         
         return (x_train, y_train), (x_test, y_test)
 
-    def build_model(self, n_strati_conv, dim_strati_conv, n_strati_densi, dim_strati_densi):
-        input_shape = (82, 165)
+    def build_model(self, n_strati_LSTM, dim_strati_LSTM, n_strati_densi, dim_strati_densi):
+        input_shape = self.input_shape
 
         model = Sequential()
         model.add(Masking(mask_value=-99, input_shape=input_shape))
 
-        for _ in range(n_strati_conv - 1):
-            model.add(LSTM(dim_strati_conv, return_sequences=True))
+        for _ in range(n_strati_LSTM - 1):
+            model.add(LSTM(dim_strati_LSTM, return_sequences=True))
             model.add(BatchNormalization())
             model.add(Dropout(0.3))
     
 
         
-        model.add(LSTM(dim_strati_conv, return_sequences=False))
+        model.add(LSTM(dim_strati_LSTM, return_sequences=False))
         model.add(BatchNormalization())
         model.add(Dropout(0.3))
 

@@ -58,7 +58,6 @@ def evaluate_model(model,xtest,ytest,history,model_name=""):
 
     # Confusion matrix
     prediction=model.predict(xtest)
-    #recupero lista con gli indici corrispondenti ai risultati corretti nelle label
     ytrue=np.argmax(ytest,axis=1).tolist()
     ypredicted=np.argmax(prediction, axis=1).tolist()
     

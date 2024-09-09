@@ -19,9 +19,17 @@ print("LABELS")
 labels=get_labels("labels.txt")
 labels=list(labels.keys())
 print("LABELS OTTENUTE")
-input_shape=(131,171)
-#input_shape=(148,171) #lettere
-#input_shape =(134,171) 
+if os.path.exists("x.npy"):
+    x=np.load("x.npy")
+    input_shape=(x.shape[1], x.shape[2])
+else:
+    print("x.npy non trovato")
+    val1= input("inserisci il numero massimo di frame:")
+    val2= input("inserisci il numero di valori:")
+    input_shape=(val1,val2)
+    #input_shape=(131,171)
+    #input_shape=(148,171) #lettere
+    #input_shape =(134,171) 
 model=create_model(input_shape,labels)
 model.load_weights("weights.keras")
 print("MODELLO CARICATO")

@@ -158,14 +158,14 @@ class Population:
     #funzione per scegliere un valore da modificare nel dna dell'individuo    
     def random_modify(self):
         #prendo le chiavi del dizionario del dna di cui si vuole modificare il valore con la mutazione
-        individual_attributes=["n_strati_convoluzionali","dimensione_strati_convoluzionali","n_strati_densi","dimensione_strati_densi"]
+        individual_attributes=["n_strati_LSTM","dimensione_strati_LSTM","n_strati_densi","dimensione_strati_densi"]
         #seleziono un valore da modificare nel dizionario casualmente e poi ritorno il campo da modificare col nuovo valore
         target=random.randint(0,len(individual_attributes)-1)
 
-        if(target==0):  #n_strati_convoluzionali
+        if(target==0):  #n_strati_LSTM
             new_value=random.randint(1,4)
             
-        elif(target==1):    #dimensione_strati_convoluzionale
+        elif(target==1):    #dimensione_strati_LSTM
             new_value=random.randint(32,256)
            
         elif(target==2):    #n_strati_densi
