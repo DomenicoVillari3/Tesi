@@ -22,15 +22,22 @@ print("LABELS OTTENUTE")
 if os.path.exists("x.npy"):
     x=np.load("x.npy")
     input_shape=(x.shape[1], x.shape[2])
+    print("input_shape", input_shape)
 else:
     print("x.npy non trovato")
     val1= input("inserisci il numero massimo di frame:")
     val2= input("inserisci il numero di valori:")
     input_shape=(val1,val2)
-    #input_shape=(131,171)
-    #input_shape=(148,171) #lettere
-    #input_shape =(134,171) 
-model=create_model(input_shape,labels)
+    
+if x.shape[2]==6:
+        model=create_model(input_shape,labels,n_lstm=4,dim_lstm=78,n_dense=2,dim_dense=49)
+elif x.shape[2]==171:
+    model=create_model(input_shape,labels,n_lstm=1,dim_lstm=68,n_dense=1,dim_dense=85)
+elif x.shape[2]==1575:
+    model=create_model(input_shape,labels,n_lstm=1,dim_lstm=190,n_dense=1,dim_dense=99)
+else:
+    model=create_model(input_shape,labels)
+
 model.load_weights("weights.keras")
 print("MODELLO CARICATO")
 
@@ -61,7 +68,7 @@ while True:
         #Disegna landmarks
         draw_landmarks(frame=frame, results=results,mp_drawing=mp_drawing,mp_holistic=mp_holistic)
         
-        if len(sys.argv)==2 and (sys.argv[1]=='-a' or sys.argv[1]=='--angles'):
+        if input_shape[1]==6 or (len(sys.argv)==2 and (sys.argv[1]=='-a' or sys.argv[1]=='--angles')):
             landmarks=extract_landmarks_angles(results)
         else:
             # Estrazione dei landmarks su un array unidimensionale

@@ -11,24 +11,25 @@ from sklearn.metrics import classification_report,confusion_matrix,ConfusionMatr
 from create_dataset import get_labels
 import matplotlib.pyplot as plt
 
-def create_model(input_shape,labels):
+def create_model(input_shape,labels,n_lstm=1,dim_lstm=72,n_dense=1,dim_dense=190):
     # Define LSTM model
     model = Sequential()
 
     model.add(Masking(mask_value=-99, input_shape=input_shape))
-    #model.add(Masking(mask_value=0))
 
-    #model.add(LSTM(128, return_sequences=True, input_shape=input_shape))
-    #model.add(BatchNormalization())
-    #model.add(Dropout(0.5))
-    #model.add(Bidirectional(LSTM(73, return_sequences=False)))   
-    model.add(LSTM(73, return_sequences=False))
+    for _ in range(1,n_lstm):
+        model.add(LSTM(dim_lstm, return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.3))
+
+    model.add(LSTM(dim_lstm, return_sequences=False))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
         
-    model.add(Dense(190, activation='relu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.35))
+    for _ in range(n_dense):
+        model.add(Dense(dim_dense, activation='relu'))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.3))
 
     model.add(Dense(len(labels), activation='softmax'))
     return model
@@ -78,8 +79,6 @@ def main():
     x=np.load("x.npy")
     y=np.load("y.npy")
     
-
-
     x_train,x_test,y_train,y_test=train_test_split(x,y,train_size=0.85,random_state=11)
     x_val,x_test,y_val,y_test=train_test_split(x_test,y_test,test_size=0.75,random_state=11)
     print(np.shape(x_test),np.shape(y_test),np.shape(x_train),np.shape(y_train),np.shape(x_val),np.shape(y_val))
@@ -87,11 +86,17 @@ def main():
     # Define input shape
     input_shape = (x_train.shape[1], x_train.shape[2])  
     print("Input shape ",input_shape)
+    if x_train.shape[2]==6:
+        model=create_model(input_shape,labels,n_lstm=4,dim_lstm=78,n_dense=2,dim_dense=49)
+    elif x_train.shape[2]==171:
+        model=create_model(input_shape,labels,n_lstm=1,dim_lstm=68,n_dense=1,dim_dense=85)
+    elif x_train.shape[2]==1575:
+        model=create_model(input_shape,labels,n_lstm=1,dim_lstm=190,n_dense=1,dim_dense=99)
+    else:
+        model=create_model(input_shape,labels)
 
-    model=create_model(input_shape,labels)
 
-
-
+    
     # Load pre-trained weights
     weights_path = 'weights.keras'
     if os.path.exists(weights_path):
