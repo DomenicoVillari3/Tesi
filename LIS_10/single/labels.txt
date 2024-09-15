@@ -1,0 +1,10 @@
+io
+addio
+come stai?
+acqua
+buongiorno
+bacio
+no
+si
+buonanotte
+ciao

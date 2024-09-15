@@ -10,6 +10,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report,confusion_matrix,ConfusionMatrixDisplay
 from create_dataset import get_labels
 import matplotlib.pyplot as plt
+from imblearn.over_sampling import SMOTE
+
 
 def create_model(input_shape,labels,n_lstm=1,dim_lstm=72,n_dense=1,dim_dense=190):
     # Define LSTM model
@@ -78,6 +80,29 @@ def main():
 
     x=np.load("x.npy")
     y=np.load("y.npy")
+
+    #determino le classi e ne mostro la distribuzione
+    val_y = np.argmax(y, axis=1)
+    n, c = np.unique(val_y, return_counts=True)
+    print("Distribution iniziale,", dict(zip(n, c)))
+
+    # Reshape dei dati a 2D per adattarli a SMOTE
+    x_train_reshaped = x.reshape((x.shape[0], -1))
+    y_train_reshaped = np.argmax(y, axis=1)
+
+    #SMOTE per oversampling
+    smote = SMOTE()
+    x_train_resampled, y_train_resampled = smote.fit_resample(x_train_reshaped, y_train_reshaped)
+
+    # Reshape dei dati resampled alla forma originale
+    x = x_train_resampled.reshape((-1, x.shape[1], x.shape[2]))
+    print("len labels", labels)
+    print("Input shape", np.shape(x))
+    y = to_categorical(y_train_resampled, num_classes=len(labels))
+
+    #determino le classi e ne mostro la distribuzione
+    n, c = np.unique(y_train_resampled,return_counts=True)
+    print("Distribution finale,", dict(zip(n, c)))
     
     x_train,x_test,y_train,y_test=train_test_split(x,y,train_size=0.85,random_state=11)
     x_val,x_test,y_val,y_test=train_test_split(x_test,y_test,test_size=0.75,random_state=11)

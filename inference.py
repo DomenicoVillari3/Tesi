@@ -108,7 +108,7 @@ while True:
             # Visualizza l'etichetta sul frame
             sequence=sequence[-input_shape[0]:]
 
-        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
     # Mostra il frame
     cv2.imshow('Webcam', frame)

@@ -1,5 +1,5 @@
-/points
-/video
+points
+video
 /points1
 /frasi80
 /frasiDemo
@@ -23,4 +23,4 @@ todo.txt
 frames.txt
 x.npy
 y.npy
-weights.keras
+/ALL_LIS/
