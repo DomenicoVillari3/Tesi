@@ -15,7 +15,7 @@ def get_labels(file):
         f.close()
     
     labels_dict = dict()
-    index=0
+    index=0 #index che identifica la label
     for label in labels:
         labels_dict[label]=index
         index+=1
@@ -24,19 +24,22 @@ def get_labels(file):
 
 #funzione per trovare i file associati ad una label basandosi sul nome 
 def filtra_directory(root_dir,filtro):
-    files=[]
-    pattern = rf'\b{filtro}_\d+\.npy$'
+    files=[] #file asociati all'azione 
+    pattern = rf'\b{filtro}_\d+\.npy$' #funzione regolare che cerca i file <azione>_<numero>.npy
     for file in os.listdir(root_dir):
         if re.search(pattern,file):
             files.append(os.path.join(root_dir,file))
     return files
 
+#Funzione che recupera il numero più grande di frame nel file frames.txt
 def get_max_frame(file="frames.txt"):
     with open(file, "r") as f:
         frames = [int(line.strip()) for line in f]
         f.close()
     return max(frames)
 
+#Funzione che per ogni label ne recupera i file npy e crea X e Y, convertendo to categorical le Y e facendo un padding
+#sulla X
 def read_file_npy(labels,source_dir="points"):
     x=[]
     y=[]

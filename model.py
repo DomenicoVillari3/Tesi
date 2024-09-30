@@ -41,7 +41,7 @@ def evaluate_model(model,xtest,ytest,history,model_name=""):
     print('Test Loss:', loss)
     print('Test Accuracy:', acc)
 
-    # Plot training & validation accuracy values
+    # Plot training e validation accuracy
     plt.plot(history.history['categorical_accuracy'])
     plt.plot(history.history['val_categorical_accuracy'])
     plt.title('Model accuracy '+model_name)
@@ -50,7 +50,7 @@ def evaluate_model(model,xtest,ytest,history,model_name=""):
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.show()
 
-    # Plot training & validation loss values
+    # Plot training  and validation loss 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('Model loss')
@@ -82,12 +82,13 @@ def main():
     y=np.load("y.npy")
 
     #determino le classi e ne mostro la distribuzione
-    val_y = np.argmax(y, axis=1)
-    n, c = np.unique(val_y, return_counts=True)
+    val_y = np.argmax(y, axis=1) #arhmax perchè i valori sono rappr. in one-hot
+    n, c = np.unique(val_y, return_counts=True) 
     print("Distribution iniziale,", dict(zip(n, c)))
 
-    # Reshape dei dati a 2D per adattarli a SMOTE
-    x_train_reshaped = x.reshape((x.shape[0], -1))
+    # Reshape dei dati a 2D per adattarli a SMOTE (Synthetic Minority Over-sampling Technique)
+    x_train_reshaped = x.reshape((x.shape[0], -1)) 
+    print("Reshaped shape", np.shape(x_train_reshaped))
     y_train_reshaped = np.argmax(y, axis=1)
 
     #SMOTE per oversampling

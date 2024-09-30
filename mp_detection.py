@@ -120,7 +120,7 @@ def draw_landmarks(results,frame,mp_drawing,mp_holistic):
                                   
 
 
-'''Funzione per elaborare i landmarks in un array unidimensionale
+'''Funzione per elaborare gli angoli tra i landmarks in un array unidimensionale 
     Input=risultati del modello holistic
     Output=array ad 1 dim con i landmark
 '''
@@ -173,8 +173,10 @@ def extract_landmarks_angles(results):
         return ret
 
     
-    
-
+'''Funzione per elaborare i landmarks in un array unidimensionale
+    Input=risultati del modello holistic
+    Output=array ad 1 dim con i landmark
+'''
 def extract_landmarks_points(results):
     # Array per i landmarks delle pose e delle mani 3D, se non c'è creo un array di 0 
     # 33 punti per la posa 
@@ -392,6 +394,11 @@ def process_landmarks(dir):
         file.write("\n".join(map(str, frames)))
         print("Frames count saved to frames.txt")
 
+
+
+'''
+MAIN FUNCTION
+'''
 
 
 print(f"sys.argv: {sys.argv}")
