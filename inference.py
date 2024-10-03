@@ -43,7 +43,7 @@ print("MODELLO CARICATO")
 
 sequence=[] #64 frames
 sentence=[] 
-threshold=0.7
+threshold=0.65
 
 # Initialize the Holistic model
 mp_holistic = mp.solutions.holistic
@@ -84,11 +84,14 @@ while True:
     
     sequence.append(landmarks)
     
+    
     sequence=sequence[-input_shape[0]:]
 
     if np.all(sequence == -99):
         sequence = []
         continue
+
+    print(len(sequence))
     
     if len(sequence)==input_shape[0]:
         #passiamo 1 seq (1,64,162)
@@ -106,9 +109,11 @@ while True:
             if len(sentence)>5:
                 sentence=sentence[-5:] 
             # Visualizza l'etichetta sul frame
-            sequence=sequence[-input_shape[0]:]
-
-        cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+            #sequence=sequence[-input_shape[0]:]
+            
+            sequence = []  # Resetta la sequenza dei frame solo dopo una rilevazione valida
+    
+    cv2.putText(frame, ' '.join(sentence), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
     # Mostra il frame
     cv2.imshow('Webcam', frame)

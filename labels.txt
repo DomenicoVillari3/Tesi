@@ -4,7 +4,7 @@ libro
 cane
 corpo
 acqua
-come-stai
+come stai?
 ciao
 bacio
 io
