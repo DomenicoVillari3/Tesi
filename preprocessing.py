@@ -2,12 +2,12 @@ import os
 import random
 import numpy as np
 import cv2
-from argument import grayscale,flip,brightness_and_contrast,rotate,traslate,add_random_noise,show_video,blur,resize,color_jitter,change_fps
+from augment import grayscale,flip,brightness_and_contrast,rotate,traslate,add_random_noise,show_video,blur,resize,color_jitter,change_fps
 import gc
 
 VIDEO_DIR = "video"
 
-def argument_videos(dir,labels_file="labels.txt"):
+def augment_videos(dir,labels_file="labels.txt"):
     labels=[]
 
     videos=os.listdir(dir)
@@ -143,6 +143,6 @@ def argument_videos(dir,labels_file="labels.txt"):
 
         
 
-labels=argument_videos(VIDEO_DIR)
+labels=augment_videos(VIDEO_DIR)
 
 
