@@ -312,21 +312,6 @@ Le etichette nella radice sono, in ordine: **buonanotte, grazie, libro, cane, co
 
 Gli esperimenti LIS multi usano **11 etichette**, nonostante il nome `LIS_10`, e riportano `come-stai` al posto di `come stai?`. Gli esperimenti ASL a punti letti dal repository hanno 15 etichette, ma l'ordine differisce tra `plain_ASL` e `argumented_ASL`: mantieni sempre il file associato al checkpoint.
 
-## Valutazione e riproducibilità
-
-I grafici e i log sono artefatti sperimentali; il repository non fornisce i video o il protocollo completo per riprodurre e verificare le metriche.
-
-Nel training corrente di `model.py`:
-
-- SMOTE viene applicato **prima** dello split dei dati.
-- Vengono creati train, validation e test, ma `model.fit()` usa `x_test, y_test` come validation data.
-- Gli stessi dati vengono poi usati nella valutazione finale.
-
-Per ottenere una stima indipendente delle prestazioni, separa i dati prima dell'oversampling, applicalo solo al training e usa validation e test distinti. Mantieni nello stesso split i video derivati dallo stesso originale e definisci una separazione per partecipante quando il dataset lo consente.
-
-La ricerca genetica valuta gli individui sullo split che guida la selezione: conserva inoltre un test finale indipendente dalla ricerca.
-
-Registra versione delle librerie, seed, mapping delle etichette, rappresentazione delle caratteristiche, split e checkpoint di ogni esperimento.
 
 ## Problemi comuni
 
