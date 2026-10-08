@@ -1,303 +1,353 @@
-# Crop Segmentation — Sicily & Malta
+# Tesi — Riconoscimento di segni con MediaPipe, LSTM e algoritmo genetico
 
-Segmentazione semantica delle colture agricole da immagini satellitari **Sentinel-2 L2A**, con una pipeline pensata per l'analisi di aree in Sicilia e a Malta.
+Progetto sperimentale per il riconoscimento di segni a partire da sequenze video, con esperimenti organizzati per **LIS (Lingua dei Segni Italiana)** e **ASL (American Sign Language)**.
 
-Il progetto, presentato nell'interfaccia come **Smart Food**, combina un modello **Prithvi EO v2**, un'API **FastAPI**, una cache **MinIO** e una demo **Gradio**. A partire da un punto geografico o da una bounding box, restituisce un overlay della segmentazione, la distribuzione delle superfici e le statistiche NDVI per quattro stagioni.
+La pipeline estrae landmark o angoli delle mani con **MediaPipe Holistic**, costruisce dataset temporali e addestra reti **LSTM** con TensorFlow/Keras. Un algoritmo genetico esplora il numero e la dimensione degli strati della rete. Uno script di inferenza usa la webcam per mostrare le etichette predette.
 
-> Il repository contiene il codice di inferenza e dei servizi. I pesi del modello devono essere forniti separatamente; non sono inclusi nel repository.
+Il repository comprende codice, modelli salvati, etichette, conteggi dei frame, grafici e log sperimentali. I video sorgente e gli array di training `x.npy` e `y.npy` non sono inclusi.
 
-## Funzionalità
+## Obiettivi e funzionalità
 
-- Analisi da punto di interesse (latitudine e longitudine WGS84) o da bounding box.
-- Recupero dei cubi satellitari da MinIO e download da STAC quando i dati non sono in cache.
-- Input multistagionale: quattro osservazioni e sei bande Sentinel-2.
-- Inferenza su chip da **224 × 224 pixel**, con overlap del **25%** e accumulo delle predizioni pesate dalla confidenza nelle zone sovrapposte.
-- Filtro acqua basato sul NIR estivo e filtro di confidenza opzionale.
-- Overlay PNG con bordi privi di dati resi trasparenti.
-- Superfici per classe in ettari e percentuali.
-- NDVI stagionale con media, deviazione standard, minimo e massimo.
-- Elaborazione in background con polling dello stato.
-- Demo web con preset per Sicilia e Malta.
+- Estrarre caratteristiche di mani, posa e, opzionalmente, volto dai video.
+- Confrontare coordinate dei landmark e una rappresentazione compatta basata su sei angoli.
+- Aumentare i video con trasformazioni spaziali e fotometriche.
+- Classificare sequenze temporali mediante reti LSTM.
+- Esplorare gli iperparametri della rete con selezione, crossover e mutazione.
+- Visualizzare le predizioni in una finestra OpenCV durante l'acquisizione da webcam.
 
-## Pipeline
+Il sistema classifica le etichette del modello scelto: la concatenazione delle predizioni nell'interfaccia webcam non implementa una traduzione linguistica completa.
 
-1. L'API riceve coordinate e anno e restituisce un `task_id`.
-2. `DataResolver` cerca una tile in MinIO; in assenza di dati utilizzabili richiede un cubo a `STACDownloader`.
-3. Il downloader seleziona una scena per stagione dal catalogo Earth Search, collection `sentinel-2-l2a`, e ricampiona le bande su una griglia UTM a **10 m/pixel**.
-4. `ModelService` normalizza l'input e applica il backbone `terratorch_prithvi_eo_v2_100_tl` con il decoder residuo definito in `architecture.py`.
-5. `InferenceEngine` ricompone la maschera e applica i filtri.
-6. `postprocess.py` genera overlay, superfici e serie NDVI.
+## Organizzazione del repository
 
-Il cubo ha forma `(T, C, H, W) = (4, 6, H, W)`. Le bande, nell'ordine atteso, sono:
-
-| Indice | Banda | Asset STAC | Descrizione |
-| ---: | --- | --- | --- |
-| 0 | B02 | `blue` | Blu |
-| 1 | B03 | `green` | Verde |
-| 2 | B04 | `red` | Rosso |
-| 3 | B08 | `nir08` | Infrarosso vicino |
-| 4 | B11 | `swir16` | SWIR 1 |
-| 5 | B12 | `swir22` | SWIR 2 |
-
-Le finestre effettive di selezione sono definite in `stac_downloader.py`:
-
-| Stagione | Finestra nell'anno richiesto |
+| File o cartella | Contenuto |
 | --- | --- |
-| `winter` | 1 gennaio – ultimo giorno di febbraio |
-| `spring` | 15 aprile – 30 maggio |
-| `summer` | 1 luglio – 15 agosto |
-| `autumn` | 1 ottobre – 15 novembre |
+| `mp_detection.py` | Acquisizione webcam, estrazione dei landmark e processing dei video |
+| `get_angle.py` | Calcolo degli angoli tra punti |
+| `coordinate_sferiche.py` | Conversione cartesiana → sferica; l'uso nell'estrazione è commentato |
+| `augment.py` | Funzioni di trasformazione dei video |
+| `preprocessing.py` | Pipeline di augmentation e scrittura delle etichette |
+| `create_dataset.py` | Lettura delle sequenze, padding e generazione di `x.npy` e `y.npy` |
+| `model.py` | Costruzione, training e valutazione della rete LSTM |
+| `inference.py` | Classificazione delle sequenze acquisite dalla webcam |
+| `NeuralNetwork.py` | Rete parametrica usata nella ricerca genetica |
+| `Individual.py` | Individuo, iperparametri, training e fitness |
+| `Population.py` | Popolazione, selezione, crossover e mutazione |
+| `Algorithm.py` | Ciclo evolutivo e registrazione dei risultati |
+| `LIS_10/` | Modelli, etichette e conteggi dei frame degli esperimenti LIS |
+| `plain_ASL/` | Artefatti degli esperimenti ASL |
+| `argumented_ASL/` | Artefatti degli esperimenti ASL con augmentation |
+| `genetico/` | Log CSV e individui degli esperimenti genetici |
+| `fig_def/` | Grafici di accuracy, loss e matrici di confusione |
+| `weights.keras` | Modello salvato nella radice |
+| `labels.txt` / `frames.txt` | Etichette ordinate e conteggi dei frame nella radice |
 
-La soglia iniziale di copertura nuvolosa è **< 20%**, con fallback a **< 40%**. L'analisi richiede una scena disponibile per ogni stagione; la selezione usa la copertura nuvolosa della scena e non una maschera nuvole per pixel.
+Gli script usano prevalentemente percorsi relativi alla directory corrente. Esegui i comandi dalla radice del progetto e conserva insieme modello, etichette e dati dell'esperimento.
 
-## Classi
+## Requisiti e ambiente
 
-| ID | Classe | Colore |
-| ---: | --- | --- |
-| 0 | Sfondo | `#000000` |
-| 1 | Olivo | `#32ff32` |
-| 2 | Vite | `#ff00ff` |
-| 3 | Agrumi | `#ff8c00` |
-| 4 | Frutteto | `#0066ff` |
-| 5 | Cereali | `#ffff00` |
-| 6 | Legumi | `#00ffff` |
-| 7 | Ortaggi | `#ff0000` |
-| 8 | Incolto | `#ffffff` |
+Le dipendenze ricavate dagli import sono:
 
-La classe 0 è esclusa dalle statistiche delle superfici e dall'NDVI. L'endpoint `/satellite/classes` espone le classi da 1 a 8.
-
-## Avvio con Docker
-
-### Prerequisiti
-
-- Git, Docker e Docker Compose.
-- Una GPU NVIDIA e il supporto GPU configurato per Docker: il Compose incluso riserva una GPU al servizio API.
-- Accesso Internet per scaricare immagini, dipendenze e dati STAC. Il catalogo STAC viene aperto anche all'avvio dell'API.
-- Uno `state_dict` PyTorch compatibile con il backbone e il decoder del progetto.
-
-Il Dockerfile API usa `pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`; la demo usa `python:3.11-slim`.
-
-### 1. Clona il repository e aggiungi i pesi
-
-```bash
-git clone https://github.com/DomenicoVillari3/crop-segmentation-Sicily-Malta.git
-cd crop-segmentation-Sicily-Malta
-mkdir -p weights
-```
-
-Copia il checkpoint compatibile in `weights/model.pth`. Questo nome è un esempio: puoi usare un altro nome aggiornando la configurazione.
-
-Il caricamento usa `load_state_dict(..., strict=True)` e rimuove i prefissi `_orig_mod.`. Il file deve contenere direttamente lo state dictionary compatibile, non un checkpoint con una struttura diversa.
-
-### 2. Crea il file `.env`
-
-Nella radice del progetto:
-
-```dotenv
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=smartfood_local
-MINIO_SECRET_KEY=sostituisci_con_una_password_locale
-MINIO_BUCKET_NAME=sicily-sentinel-data
-MINIO_API_PORT=9000
-MINIO_CONSOLE_PORT=9001
-
-MODEL_WEIGHTS_PATH=weights/model.pth
-API_BASE_URL=http://localhost:8400
-```
-
-Sostituisci la password prima di avviare i servizi.
-
-Il Compose imposta automaticamente `MINIO_ENDPOINT=minio:9000` per l'API e `API_BASE_URL=http://api:8400` per la demo. Per i pesi, antepone `/` al valore di `MODEL_WEIGHTS_PATH`: usa quindi `weights/model.pth`, senza slash iniziale.
-
-Il Dockerfile copia `weights/` in `/weights/`: la directory deve esistere prima della build. Se cambi il checkpoint, ricostruisci l'immagine API.
-
-### 3. Avvia i servizi
-
-```bash
-docker compose up -d --build
-docker compose logs -f api
-```
-
-Il Compose avvia quattro servizi: `minio`, `createbuckets`, `api` e `demo`. Il servizio `createbuckets` crea il bucket; attendi il completamento prima di inviare un'analisi.
-
-| Servizio | Indirizzo locale |
+| Libreria | Uso |
 | --- | --- |
-| Demo Gradio | http://localhost:7860 |
-| Swagger UI | http://localhost:8400/satellite/docs |
-| ReDoc | http://localhost:8400/satellite/redoc |
-| Stato API | http://localhost:8400/satellite/health |
-| Console MinIO | http://localhost:9001 |
+| TensorFlow | Backend e utility per la preparazione dei dati |
+| Keras | Reti LSTM, layer e callback |
+| MediaPipe | Rilevamento Holistic |
+| OpenCV (`cv2`) | Lettura/scrittura video, webcam e finestre |
+| NumPy | Array numerici e file `.npy` |
+| scikit-learn | Split del dataset e metriche |
+| imbalanced-learn | SMOTE |
+| Matplotlib | Grafici e matrici di confusione |
 
-Le porte MinIO cambiano se modifichi `MINIO_API_PORT` o `MINIO_CONSOLE_PORT`.
+Per la webcam è necessario un ambiente desktop con accesso alla videocamera e supporto alle finestre OpenCV.
 
-Per fermare lo stack:
-
-```bash
-docker compose down
-```
-
-I dati MinIO sono conservati nella directory locale `minio_data/`.
-
-## Avvio locale dell'API e della demo
-
-In un ambiente Python con PyTorch e le dipendenze geospaziali compatibili installati:
+### Preparazione
 
 ```bash
-python -m pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8400
+git clone https://github.com/DomenicoVillari3/Tesi.git
+cd Tesi
+python -m venv .venv
 ```
 
-Il file `requirements.txt` non include un requisito attivo per PyTorch: verifica che sia già disponibile nell'ambiente. MinIO deve essere raggiungibile, il bucket deve esistere e `.env` deve indicare il percorso locale del checkpoint.
-
-In un secondo terminale, con lo stesso ambiente:
+Attiva l'ambiente su Linux/macOS:
 
 ```bash
-python demo_gui_endpoints.py
+source .venv/bin/activate
 ```
 
-Il modello seleziona CUDA quando disponibile e altrimenti usa la CPU. Per eseguire lo stack Docker senza GPU occorre rimuovere la prenotazione NVIDIA dal servizio `api`; i tempi di inferenza su CPU possono essere maggiori.
+Su Windows PowerShell:
 
-## API
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
-Il prefisso configurato è `/satellite`.
+Installa versioni compatibili delle librerie elencate. Il repository non fornisce `requirements.txt`, un lockfile o la versione dell'ambiente originale: l'installazione va quindi verificata prima di eseguire gli esperimenti.
 
-| Metodo | Percorso | Risultato |
+### Compatibilità MediaPipe
+
+Il codice usa l'API legacy `mp.solutions.holistic`. Le versioni recenti di MediaPipe che non espongono `mp.solutions` non possono eseguire gli script senza adattamenti.
+
+Per riprodurre il percorso legacy, **MediaPipe 0.10.21** è un candidato da verificare insieme alle versioni di Python, TensorFlow, Keras, NumPy e OpenCV. Non costituisce un ambiente completo già validato per questo repository.
+
+Riferimenti: [discussione ufficiale sulla rimozione delle Solutions](https://github.com/google-ai-edge/mediapipe/issues/6204) e [compatibilità del tutorial Holistic](https://github.com/google-ai-edge/mediapipe/issues/6241).
+
+Controlla gli import e l'API richiesta:
+
+```bash
+python -c "import tensorflow, keras, cv2, numpy, sklearn, imblearn, matplotlib; import mediapipe as mp; print(mp.__version__); print(mp.solutions.holistic.Holistic)"
+```
+
+Dopo aver validato l'ambiente, registra le dipendenze effettive:
+
+```bash
+python -m pip freeze > requirements-local.txt
+```
+
+## Rappresentazioni delle caratteristiche
+
+`mp_detection.py` implementa tre modalità:
+
+| Modalità | Caratteristiche per frame | Comando |
+| --- | ---: | --- |
+| Mani + posa | 171: 21 landmark per mano e 15 di posa, con coordinate x/y/z | `python mp_detection.py --process` |
+| Mani + posa + volto | 1575: le precedenti più 468 landmark facciali x/y/z | `python mp_detection.py --process --face` |
+| Angoli delle mani | 6: tre angoli per mano | `python mp_detection.py --process --angles` |
+
+L'ordine delle coordinate è **mano sinistra, mano destra, posa, volto opzionale**. La rappresentazione angolare concatena gli angoli della mano sinistra e della mano destra.
+
+Durante l'estrazione dai video, i frame senza rilevamenti delle mani utilizzabili sono scartati; le parti mancanti di un rilevamento sono rappresentate con zeri secondo le funzioni di estrazione.
+
+## Workflow: dai video al modello
+
+### 1. Prepara i video e le etichette
+
+Crea una directory locale `video/` e inserisci video MP4 con nomi nel formato:
+
+```text
+ciao_0.mp4
+ciao_1.mp4
+grazie_0.mp4
+grazie_1.mp4
+```
+
+La parte prima di `_` identifica l'etichetta. `labels.txt` deve contenere una classe per riga, nell'ordine usato per gli indici di output della rete.
+
+Per un nuovo dataset usa nomi coerenti e preferibilmente senza spazi o caratteri speciali. Non cambiare l'ordine o il significato delle etichette associate a un modello già addestrato.
+
+In `mp_detection.py`, sostituisci il percorso assoluto presente in `VIDEO_DIR` con la directory dei tuoi video, ad esempio:
+
+```python
+VIDEO_DIR = "video"
+```
+
+I percorsi delle sequenze e del conteggio dei frame sono controllati da `POINTS_DIR_NAME` e `FRAMES_FILENAME`, rispettivamente `points` e `frames.txt` per default.
+
+### 2. Augmentation opzionale
+
+`augment.py` comprende flip, rumore, variazioni di luminosità/contrasto, blur, resize, color jitter, rotazioni, traslazioni e cambiamento degli FPS.
+
+Per applicare la pipeline di `preprocessing.py`:
+
+```bash
+python preprocessing.py
+```
+
+Lo script legge `video/`, scrive i video trasformati nella stessa directory e riscrive `labels.txt`. Eseguilo su una copia dei video sorgente e conserva le etichette originali.
+
+La versione corrente usa un `set` per scrivere le etichette e presenta collisioni tra alcuni nomi di output. Prima di usarla in un esperimento riproducibile, rendi deterministico l'ordine delle classi e assegna nomi univoci ai video generati. Ripetere l'augmentation sulla stessa cartella può elaborare anche file già aumentati.
+
+### 3. Estrai le caratteristiche
+
+Scegli **una sola rappresentazione** per ciascun dataset. Esempio con 171 caratteristiche:
+
+```bash
+python mp_detection.py --process
+```
+
+Alternative:
+
+```bash
+python mp_detection.py --process --angles
+python mp_detection.py --process --face
+```
+
+Ogni video genera `points/<etichetta>_<numero>.npy`; lo script scrive anche `frames.txt`.
+
+Le modalità condividono la directory di output: separa i risultati se vuoi confrontarle, evitando di sovrascrivere o mescolare sequenze di dimensioni diverse.
+
+Per controllare visivamente i rilevamenti dalla webcam:
+
+```bash
+python mp_detection.py --camera
+```
+
+Premi **q** per chiudere la finestra.
+
+### 4. Crea il dataset
+
+Con le sequenze in `points/` e le etichette in `labels.txt`:
+
+```bash
+python create_dataset.py --create
+```
+
+Lo script genera:
+
+| File | Forma | Contenuto |
 | --- | --- | --- |
-| POST | `/satellite/point` | Avvia un'analisi da punto; HTTP 202 e `task_id` |
-| POST | `/satellite/bbox` | Avvia un'analisi da bounding box; HTTP 202 e `task_id` |
-| GET | `/satellite/{task_id}/status` | Stato, progresso e risultati disponibili |
-| GET | `/satellite/{task_id}/image` | Overlay PNG |
-| GET | `/satellite/{task_id}/ndvi` | Statistiche NDVI stagionali |
-| GET | `/satellite/{task_id}/legend` | Legenda con ettari e percentuali |
-| GET | `/satellite/classes` | Catalogo statico delle classi, escluso lo sfondo |
-| GET | `/satellite/health` | Diagnostica modello, device e stato MinIO |
+| `x.npy` | `(N, T, F)` | N sequenze, T timestep, F caratteristiche |
+| `y.npy` | `(N, C)` | Etichette one-hot per C classi |
 
-Gli anni attualmente accettati sono **2017–2025**, con default **2023**. Il 2026 non è incluso nella configurazione corrente.
+Le sequenze vengono uniformate alla lunghezza massima con **padding finale a -99**. Il modello usa `Masking(mask_value=-99)`.
 
-### Esempio: analisi di un punto
+Il matching dei file usa l'etichetta all'interno di una regex. Nel codice corrente i caratteri speciali non sono escapati: ad esempio `come stai?` nella radice può non corrispondere al nome del file atteso. Per supportare questi nomi occorre usare `re.escape(filtro)` nella regex, mantenendo la corrispondenza con le etichette del modello.
+
+### 5. Addestra la rete LSTM
 
 ```bash
-curl -X POST http://localhost:8400/satellite/point \
-  -H "Content-Type: application/json" \
-  -d '{"lat":37.380,"lon":14.910,"year":2023}'
+python model.py --train
 ```
 
-La risposta contiene `task_id`, `status: "pending"` e `progress: 0`; gli altri campi del modello di risposta possono essere `null`.
+L'architettura combina:
 
-Copia il valore restituito e interroga lo stato:
+- Masking dei timestep di padding.
+- Uno o più strati LSTM.
+- Batch Normalization e Dropout pari a 0,3.
+- Strati Dense con attivazione ReLU.
+- Un output softmax con una unità per classe.
+
+Gli iperparametri selezionati da `model.py` dipendono dal numero di caratteristiche:
+
+| F | Strati LSTM | Unità LSTM | Strati Dense | Unità Dense |
+| ---: | ---: | ---: | ---: | ---: |
+| 6 | 4 | 78 | 2 | 49 |
+| 171 | 1 | 68 | 1 | 85 |
+| 1575 | 1 | 190 | 1 | 99 |
+| Altro | 1 | 72 | 1 | 190 |
+
+Il training usa Adam e categorical cross-entropy, fino a 2000 epoche, con EarlyStopping sulla validation loss, patience 5 e ripristino dei pesi migliori.
+
+Se trova `weights.keras`, tenta di caricarlo prima del training. Il checkpoint salva poi il miglior modello nello stesso percorso: conserva una copia degli artefatti che vuoi mantenere e verifica la compatibilità della rete prima del caricamento.
+
+Alla fine vengono mostrati loss, accuracy, curve di training/validation e matrice di confusione.
+
+## Inferenza con webcam
+
+Prima di avviare l'inferenza devono essere disponibili nella directory corrente:
+
+- `weights.keras`, compatibile con l'architettura scelta.
+- `labels.txt`, con lo stesso ordine delle classi usato in training.
+- `x.npy`, per ricavare lunghezza della sequenza e numero di caratteristiche.
+
+Per il percorso standard a 171 caratteristiche:
 
 ```bash
-TASK_ID="inserisci_il_task_id_restituito"
-curl "http://localhost:8400/satellite/$TASK_ID/status"
+python inference.py
 ```
 
-Gli stati sono `pending`, `running`, `completed` e `failed`. Ripeti il polling fino a `completed`; in caso di `failed`, consulta il campo `error`.
-
-Quando l'analisi è completata:
+Per il percorso a sei angoli, con dati e checkpoint corrispondenti:
 
 ```bash
-curl "http://localhost:8400/satellite/$TASK_ID/image" -o overlay.png
-curl "http://localhost:8400/satellite/$TASK_ID/ndvi"
-curl "http://localhost:8400/satellite/$TASK_ID/legend"
+python inference.py --angles
 ```
 
-Le richieste ai risultati prima del completamento restituiscono HTTP 202; un task inesistente restituisce HTTP 404.
+Lo script apre la webcam con indice **0**, accumula i frame e applica una soglia di confidenza di **0,65**. La finestra visualizza fino alle ultime cinque etichette accettate, evitando ripetizioni consecutive. Dopo una predizione accettata la sequenza viene azzerata.
 
-### Esempio: analisi di una bounding box
+Premi **q** per terminare.
 
-L'ordine geografico è `[min_lon, min_lat, max_lon, max_lat]`. Entrambi i valori massimi devono essere maggiori dei rispettivi minimi.
+Il fallback interattivo quando `x.npy` è assente non è funzionante: il codice continua a usare la variabile `x` non inizializzata e non converte gli input in interi. Va corretto prima di eseguire inferenza senza il dataset.
 
-> Il percorso BBox presenta un problema noto nella ricerca della cache, descritto più avanti. Per una prima verifica dello stack usa l'endpoint POI.
+Per il modello a **1575 caratteristiche**, la gestione dei flag dell'estrattore deve essere adattata anche nell'inferenza: il percorso webcam corrente non attiva automaticamente l'estrazione del volto in base alla forma dell'input.
 
-```bash
-curl -X POST http://localhost:8400/satellite/bbox \
-  -H "Content-Type: application/json" \
-  -d '{"min_lon":14.395,"min_lat":35.880,"max_lon":14.455,"max_lat":35.940,"year":2023}'
-```
+## Ricerca con algoritmo genetico
 
-La procedura di polling e recupero dei risultati è identica a quella del punto.
+L'algoritmo cerca quattro iperparametri:
 
-## Interpretazione dei risultati
-
-- `source`: `minio` se il cubo proviene dalla cache, `stac` se è stato scaricato.
-- `year_used`: anno effettivamente utilizzato.
-- `bbox`: area geografica del cubo risolto.
-- `class_stats`: superfici per le classi presenti, ordinate per ettari decrescenti.
-- `total_ha`: somma delle superfici classificate, **escluso lo sfondo**.
-- `percentage`: quota sul totale dei pixel non-sfondo, non sull'intera bounding box.
-- `ndvi_series`: quattro punti stagionali, calcolati sui pixel con classe maggiore di 0, inclusa la classe Incolto.
-
-Le superfici sono calcolate assumendo **100 m² per pixel**, cioè **0,01 ha**. L'NDVI usa `(NIR - Red) / (NIR + Red + 1e-6)`. L'overlay combina l'RGB estivo e la segmentazione con opacità predefinita del **55%**.
-
-Per le richieste POI, un hit in cache usa un crop fino a **800 × 800 pixel**; il download STAC usa un bbox centrato sul punto di **0,1° per lato**. L'area restituita può quindi differire tra cache e primo download: consulta sempre `bbox`.
-
-## Configurazione
-
-| Variabile ambiente | Uso |
+| Gene | Intervallo |
 | --- | --- |
-| `MINIO_ENDPOINT` | Host e porta MinIO, senza schema; il client corrente usa HTTP |
-| `MINIO_ACCESS_KEY` | Credenziale MinIO, obbligatoria |
-| `MINIO_SECRET_KEY` | Credenziale MinIO, obbligatoria |
-| `MINIO_BUCKET_NAME` | Bucket per cubi e anteprime |
-| `MODEL_WEIGHTS_PATH` | Percorso dello state dictionary PyTorch |
-| `API_BASE_URL` | URL base dell'API usato dalla demo, senza `/satellite` |
-| `MINIO_API_PORT` | Porta host MinIO nel Compose; default 9000 |
-| `MINIO_CONSOLE_PORT` | Porta host della console nel Compose; default 9001 |
-| `MIN_CONFIDENCE` | Soglia opzionale; default 0, filtro disabilitato |
+| Numero di strati LSTM | 1–4 |
+| Unità degli strati LSTM | 32–256 |
+| Numero di strati Dense | 1–5 |
+| Unità degli strati Dense | 32–256 |
 
-Per usare `MIN_CONFIDENCE` nel container API aggiungila al blocco `environment` del servizio: il Compose corrente non la inoltra.
+La configurazione corrente usa **20 individui**, crossover a un punto e probabilità di mutazione del **10%**. Ogni rete usa fino a 50 epoche, con EarlyStopping di patience 10. Il tempo di training viene registrato; la fitness effettiva coincide con l'accuracy di valutazione.
 
-Le altre impostazioni sono costanti in `config.py`: bande, classi, normalizzazione, overlap, soglie acqua, anni supportati e limite di inferenze concorrenti, pari a **4**. La correzione delle predizioni con i prior di classe è attiva tramite `APPLY_PRIOR_CORRECTION=True`.
+Il ciclo si arresta quando il miglior individuo raggiunge fitness **≥ 0,85**. Questa è una soglia nel codice, non un risultato garantito; non è configurato un limite massimo di generazioni.
 
-## Struttura del codice
+### Preparazione necessaria
 
-| File | Responsabilità |
+1. Fornisci `x.npy`, `y.npy` e `labels.txt` coerenti.
+2. Correggi `NeuralNetwork.load_data()`: applica `to_categorical` solo se le etichette sono indici interi. `create_dataset.py` produce già una matrice one-hot, che il codice genetico attuale riconverte erroneamente.
+3. In `Algorithm.py`, scegli la sorgente della popolazione. Il default legge `individui.txt` nella radice, che non è incluso. Per creare una popolazione nuova usa `Population(size=20, file=None)`; per riprendere un esperimento seleziona un log compatibile e configura `resume=True` e il numero della generazione.
+4. Gestisci il caso di fitness tutte uguali in `normalize_fitness()`, che altrimenti divide per zero.
+
+Dopo queste modifiche:
+
+```bash
+python Algorithm.py
+```
+
+Il ciclo scrive `Generazione.csv` e `individui.txt`. I campi CSV sono `generazione`, `dna`, `tempo`, `accuracy`, `fitness` e `normalized_fitness`.
+
+La ricerca registra gli iperparametri e le metriche, ma non salva automaticamente il modello del miglior individuo. Per usarlo nell'inferenza occorre costruire, addestrare e salvare la rete corrispondente.
+
+I log degli individui vengono letti con `eval()`: usa soltanto file fidati; per un formato di persistenza robusto sostituisci questa lettura con una serializzazione strutturata.
+
+## Artefatti degli esperimenti
+
+| Percorso | Artefatti presenti |
 | --- | --- |
-| `main.py` | Applicazione FastAPI, task e endpoint |
-| `schemas.py` | Validazione e modelli di risposta Pydantic |
-| `config.py` | Variabili ambiente e parametri della pipeline |
-| `architecture.py` | Decoder residuo e architettura di segmentazione |
-| `model_service.py` | Caricamento del modello, normalizzazione e inferenza dei chip |
-| `inference_engine.py` | Sliding window, ricomposizione e filtri |
-| `data_resolver.py` | Risoluzione dei dati e ritagli geografici |
-| `stac_downloader.py` | Selezione stagionale e download Sentinel-2 |
-| `minio_store.py` | Ricerca, download e upload nella cache |
-| `postprocess.py` | Overlay, statistiche e NDVI |
-| `demo_gui_endpoints.py` | Interfaccia Gradio |
-| `Dockerfile` / `Dockerfile.demo` | Immagini API e demo |
-| `docker-compose.yaml` | Orchestrazione dei servizi |
-| `requirements.txt` | Dipendenze Python |
+| `LIS_10/multi/angles6/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `LIS_10/multi/points171/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `LIS_10/multi/points1575/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `LIS_10/single/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `plain_ASL/angles23/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `plain_ASL/points15/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `argumented_ASL/points_69/` | `weights.keras`, `labels.txt`, `frames.txt` |
+| `genetico/6/`, `genetico/171/`, `genetico/575/` | `Generazione.csv` e `individui.txt` |
+| `fig_def/` | Grafici PNG di accuracy, loss e matrici di confusione |
 
-I cubi sono salvati in MinIO sotto `raw_cubes/year=YYYY/`; le anteprime RGB sotto `rgb_images/year=YYYY/`. I metadata includono bbox, anno e forma del cubo.
+I nomi delle cartelle identificano gli esperimenti; non sostituiscono i metadata del modello. Prima di riutilizzare un checkpoint verifica forma di input, architettura, preprocessing e ordine delle classi.
 
-## Limiti dell'implementazione corrente
+Le etichette nella radice sono, in ordine: **buonanotte, grazie, libro, cane, corpo, acqua, come stai?, ciao, bacio, io, buongiorno**.
 
-- **Percorso BBox:** in `MinioStore.find_tile_by_bbox()` il controllo di contenimento è fuori dal ciclo di ricerca. Con una cache vuota può accedere a variabili non inizializzate; con più tile valuta solo l'ultima. Inoltre `resolve_from_bbox()` non passa l'anno richiesto alla ricerca. Questi punti vanno corretti per rendere affidabili le analisi BBox.
-- **Task in memoria:** stato e risultati sono mantenuti nel processo API e si perdono al riavvio. La costante `TASK_TTL_SECONDS` è definita ma non è applicata; non è implementata una pulizia automatica. Usa un singolo worker finché il task store non è condiviso.
-- **Dati e validazione:** la disponibilità delle quattro scene dipende da area, anno e nuvole. Il repository non contiene script di training, dataset di valutazione o metriche che consentano di quantificare l'accuratezza in Sicilia e a Malta.
-- **Demo:** il polling termina dopo 300 secondi; il timeout della demo non annulla il task API.
-- **Deploy:** il Compose rende il bucket pubblico tramite `mc anonymous set public`; l'API non implementa autenticazione e abilita CORS per tutte le origini. Questa configurazione va rivista prima di esporre il servizio fuori dall'ambiente di sviluppo.
-- **Diagnostica MinIO:** il controllo `health` istanzia il client ma non verifica con una richiesta la raggiungibilità del bucket.
+Gli esperimenti LIS multi usano **11 etichette**, nonostante il nome `LIS_10`, e riportano `come-stai` al posto di `come stai?`. Gli esperimenti ASL a punti letti dal repository hanno 15 etichette, ma l'ordine differisce tra `plain_ASL` e `argumented_ASL`: mantieni sempre il file associato al checkpoint.
 
-## Risoluzione dei problemi
+## Valutazione e riproducibilità
 
-| Problema | Verifica |
+I grafici e i log sono artefatti sperimentali; il repository non fornisce i video o il protocollo completo per riprodurre e verificare le metriche.
+
+Nel training corrente di `model.py`:
+
+- SMOTE viene applicato **prima** dello split dei dati.
+- Vengono creati train, validation e test, ma `model.fit()` usa `x_test, y_test` come validation data.
+- Gli stessi dati vengono poi usati nella valutazione finale.
+
+Per ottenere una stima indipendente delle prestazioni, separa i dati prima dell'oversampling, applicalo solo al training e usa validation e test distinti. Mantieni nello stesso split i video derivati dallo stesso originale e definisci una separazione per partecipante quando il dataset lo consente.
+
+La ricerca genetica valuta gli individui sullo split che guida la selezione: conserva inoltre un test finale indipendente dalla ricerca.
+
+Registra versione delle librerie, seed, mapping delle etichette, rappresentazione delle caratteristiche, split e checkpoint di ogni esperimento.
+
+## Problemi comuni
+
+| Problema | Causa o verifica |
 | --- | --- |
-| Credenziali MinIO mancanti | Definisci `MINIO_ACCESS_KEY` e `MINIO_SECRET_KEY` nell'ambiente o in `.env` |
-| Build fallita su `COPY weights/` | Crea la directory e inserisci il checkpoint prima della build |
-| Pesi non trovati o incompatibili | Controlla percorso e compatibilità dello state dictionary con l'architettura |
-| API non parte con Docker | Controlla i log, il supporto GPU e l'accesso al catalogo STAC |
-| Nessun dato disponibile | Controlla coordinate, anno e disponibilità di una scena per ogni stagione |
-| Analisi BBox fallita | Verifica il problema della cache descritto nei limiti |
-| Timeout nella demo | Consulta `/status` e i log API; prova un'area più piccola |
+| `mediapipe` non espone `solutions` | Versione incompatibile con l'API legacy |
+| Directory video non trovata | Aggiorna `VIDEO_DIR` in `mp_detection.py` |
+| `x.npy` o `y.npy` mancanti | Estrai le sequenze e avvia `create_dataset.py --create` |
+| Classe senza sequenze | Controlla nomi dei file, etichette e caratteri speciali nella regex |
+| Shape incompatibile | Non mescolare angoli, coordinate e modelli di esperimenti diversi |
+| Pesi incompatibili | Verifica numero di classi e parametri della rete |
+| Errore nella ricerca genetica | Controlla la ricodifica one-hot e il percorso di `individui.txt` |
+| Webcam non disponibile | Controlla indice della videocamera e permessi del sistema |
+| Finestra OpenCV non disponibile | Usa un ambiente desktop e un pacchetto OpenCV con GUI |
 
-## Licenza
 
-Nel repository non è presente un file `LICENSE`. Le condizioni di riutilizzo del codice devono essere definite dall'autore; verifica separatamente quelle applicabili ai pesi del modello e ai dati satellitari.
+
 
 ## Autore
 
 [Domenico Villari](https://github.com/DomenicoVillari3)
 
-Repository: [crop-segmentation-Sicily-Malta](https://github.com/DomenicoVillari3/crop-segmentation-Sicily-Malta)
+Repository: [DomenicoVillari3/Tesi](https://github.com/DomenicoVillari3/Tesi)
 
